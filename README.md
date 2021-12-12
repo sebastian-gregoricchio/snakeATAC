@@ -7,3 +7,20 @@
 
 # snakeATAC <img src="https://sebastian-gregoricchio.github.io/snakeATAC/snakeATAC_logo.svg" align="right" height = 150/>
 Snakemake pipeline for analysis and normalization of ATAC-seq data starting from fastq.gz files.
+
+
+
+
+
+-----------------
+## Contact
+For any suggestion, bug fixing, commentary please contact Sebastian Gregoricchio at [sebastian.gregoricchio@gmail.com](mailto:sebastian.gregoricchio@gmail.com).
+
+## License
+This package is under a [GNU General Public License (version 3)](https://sebastian-gregoricchio.github.io/Rseb/LICENSE.md/LICENSE).
+
+<br /> 
+
+#### Contributors
+[![contributors](https://badges.pufler.dev/contributors/sebastian-gregoricchio/Rseb?size=50&padding=5&bots=true)](https://sebastian-gregoricchio.github.io/)
+
