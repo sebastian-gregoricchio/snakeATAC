@@ -1,0 +1,447 @@
+from typing import List
+import pathlib
+import re
+import numpy
+
+# Function to handle the values for the wilcards
+def constraint_to(values: List[str]) -> str:
+    """
+    From a list, return a regular expression allowing each
+    value an not other.
+    ex: ["a", "b", "v"] -> (a|b|v)
+    """
+    if isinstance(values, str):
+        raise ValueError("constraint_to(): Expected a list, got str instead")
+
+    return "({})".format("|".join(values))
+
+# working diirectory
+workdir: config["output_directory"]
+
+
+# get the unique samples names
+FILENAMES = next(os.walk(config["runs_directory"]))[2]
+RUNNAMES = [re.sub(".fastq.gz$", "", i) for i in FILENAMES]
+SAMPLENAMES = numpy.unique([re.sub("_R[1|2].*$", "", i) for i in FILENAMES])
+
+
+
+# generation of global wildcard_constraints
+wildcard_constraints:
+    RUNS=constraint_to(RUNNAMES),
+    SAMPLES=constraint_to(SAMPLENAMES)
+
+# ========================================================================================
+#  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# ========================================================================================
+
+
+
+# ========================================================================================
+# Function to run all funtions
+rule AA_all:
+    input:
+        # Rule A
+        build_fastqcDir = ancient(os.path.dirname("01_fastQC_raw/multiQC_raw/")),
+        build_SAM = ancient(os.path.dirname("02_SAM/")),
+        build_BAM = ancient(os.path.dirname("03_BAM/flagstat/")),
+        build_BAMdedup_metrics = ancient(os.path.dirname("04_BAM_dedup/metrics/")),
+        build_BAMdedup_flagstat = ancient(os.path.dirname("04_BAM_dedup/flagstat/")),
+        build_BAMdedup_multiQC = ancient(os.path.dirname("04_BAM_dedup/fastQC/multiQC_dedup_bams/")),
+        build_BAMdedup_fragmentPlots = ancient(os.path.dirname("04_BAM_dedup/fragmentSizeDistribution_plots/")),
+        build_normalization = ancient(os.path.dirname("05_Normalization/scalingFactor/")),
+        build_HMCan = ancient(os.path.dirname("05_Normalization/HMCan_output/")),
+        build_normBigWig = ancient(os.path.dirname("05_Normalization/normalized_bigWigs/")),
+
+        # Rule B
+        fastQC_raw_zip = expand(os.path.join("01_fastQC_raw", "{run}_fastqc.zip"), run=RUNNAMES),
+
+        # Rule C
+        multiQC_raw_html = ancient("01_fastQC_raw/multiQC_raw/multiQC_report_fastqRaw.html"),
+
+        # Rule D
+        SAM = expand(os.path.join("02_SAM/", "{sample}.sam"), sample=SAMPLENAMES),
+
+        # Rule E
+        filtBAM_sorted_woMT = expand(os.path.join("03_BAM/", "{sample}_mapQ{MAPQ}_sorted_woMT.bam"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"])),
+        filtBAM_sorted_woMT_index = expand(os.path.join("03_BAM/", "{sample}_mapQ{MAPQ}_sorted_woMT.bam.bai"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"])),
+        flagstat_unfiltered_BAM = expand(os.path.join("03_BAM/flagstat/", "{sample}_flagstat_UNfiltered_bam.txt"), sample=SAMPLENAMES),
+        flagstat_on_filtered_woMT_BAM = expand(os.path.join("03_BAM/flagstat/", "{sample}_flagstat_filtered_bam_woMT.txt"), sample=SAMPLENAMES),
+
+        # Rule F
+        dedup_BAM_metrics = expand(os.path.join("04_BAM_dedup/metrics", "{sample}_metrics_woMT_dedup_bam.txt"), sample=SAMPLENAMES),
+        dedup_BAM_flagstat = expand(os.path.join("04_BAM_dedup/flagstat/", "{sample}_flagstat_filtered_bam_woMT_dedup.txt"), sample=SAMPLENAMES),
+
+        # Rule G
+        dedup_BAM_shifted_sorted = expand(os.path.join("04_BAM_dedup/", "{sample}_mapQ{MAPQ}_woMT_dedup_shifted_sorted.bam"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"])),
+        dedup_BAM_shifted_sorted_index = expand(os.path.join("04_BAM_dedup/", "{sample}_mapQ{MAPQ}_woMT_dedup_shifted_sorted.bam.bai"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"])),
+        dedup_BAM_flagstat_shifted_sorted = expand(os.path.join("04_BAM_dedup/flagstat/", "{sample}_flagstat_woMT_dedup_shifted_sorted.txt"), sample=SAMPLENAMES),
+
+        # Rule H
+        fastQC_zip_BAM = expand(os.path.join("04_BAM_dedup/fastQC/", "{sample}_mapQ{MAPQ}_sorted_woMT_dedup_fastqc.zip"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"])),
+
+        # Rule I
+        multiQC_BAM_html = ancient("04_BAM_dedup/fastQC/multiQC_dedup_bams/multiQC_report_BAMs_dedup.html"),
+
+        # Rule J
+        fragmentSizePlot = expand(os.path.join("04_BAM_dedup/fragmentSizeDistribution_plots/", "{sample}_fragment_size_distribution.pdf"), sample=SAMPLENAMES),
+
+        # Rule K
+        scalingFactors_txt_result = "05_Normalization/scalingFactor/scalingFactor_results.txt",
+
+        # Rule L
+        HMCan_config = "05_Normalization/HMCan_output/CONFIGURATION_file_HMCan.txt",
+
+        # Rule M
+        HMCan_regions = expand(os.path.join("05_Normalization/HMCan_output/", ''.join(["{sample}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_regions.bed"])), sample=SAMPLENAMES),
+        HMCan_peaks = expand(os.path.join("05_Normalization/HMCan_output/", ''.join(["{sample}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_peaks.narrowPeak"])), sample=SAMPLENAMES),
+        HMCan_CNV_profile = expand(os.path.join("05_Normalization/HMCan_output/", ''.join(["{sample}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_CNV_profile.txt"])), sample=SAMPLENAMES)
+    shell:
+        " echo 'Pipeline ended'"
+# ========================================================================================
+
+
+# ----------------------------------------------------------------------------------------
+# generate all the required folders
+rule A_build_environment:
+    output:
+        build_fastqcDir = os.path.dirname("01_fastQC_raw/multiQC_raw/"),
+        build_SAM = os.path.dirname("02_SAM/"),
+        build_BAM = os.path.dirname("03_BAM/flagstat/"),
+        build_BAMdedup_metrics = os.path.dirname("04_BAM_dedup/metrics/"),
+        build_BAMdedup_flagstat = os.path.dirname("04_BAM_dedup/flagstat/"),
+        build_BAMdedup_multiQC = os.path.dirname("04_BAM_dedup/fastQC/multiQC_dedup_bams/"),
+        build_BAMdedup_fragmentPlots = os.path.dirname("04_BAM_dedup/fragmentSizeDistribution_plots/"),
+        build_normalization = os.path.dirname("05_Normalization/scalingFactor/"),
+        build_HMCan = os.path.dirname("05_Normalization/HMCan_output/"),
+        build_normBigWig = os.path.dirname("05_Normalization/normalized_bigWigs/")
+    shell:
+        """
+        mkdir -p {output.build_fastqcDir}
+        mkdir -p {output.build_SAM}
+        mkdir -p {output.build_BAM}
+        mkdir -p {output.build_BAMdedup_metrics}
+        mkdir -p {output.build_BAMdedup_flagstat}
+        mkdir -p {output.build_BAMdedup_multiQC}
+        mkdir -p {output.build_BAMdedup_fragmentPlots}
+        mkdir -p {output.build_normalization}
+        mkdir -p {output.build_HMCan}
+        mkdir -p {output.build_normBigWig}
+        """
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# Perform the FastQC on raw fastq.gz
+rule B_fastQC_raw:
+    input:
+        fastq_gz = ancient(os.path.join(config["runs_directory"], "{RUNS}.fastq.gz"))
+    output:
+        html = os.path.join("01_fastQC_raw","{RUNS}_fastqc.html"),
+        zip =  os.path.join("01_fastQC_raw","{RUNS}_fastqc.zip")
+    params:
+        fastQC_raw_outdir = os.path.join(config["output_directory"], "01_fastQC_raw")
+    shell:
+        " fastqc --outdir {params.fastQC_raw_outdir} {input.fastq_gz} "
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# Perform multiQC for raw fastq reports
+rule C_multiQC_raw:
+    input:
+        fastqc_zip = ancient(expand(os.path.join("01_fastQC_raw", "{run}_fastqc.zip"), run=RUNNAMES))
+    output:
+        multiqcReportRaw = "01_fastQC_raw/multiQC_raw/multiQC_report_fastqRaw.html"
+    params:
+        fastqc_Raw_reports = os.path.join("01_fastQC_raw", "*.zip"),
+        multiQC_raw_outdir = os.path.join(config["output_directory"], "01_fastQC_raw/multiQC_raw/")
+    shell:
+        " multiqc -f --outdir {params.multiQC_raw_outdir} -n multiQC_report_fastqRaw.html {params.fastqc_Raw_reports} "
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# Reads alignement
+rule D_bwa_align:
+    input:
+        R1 = os.path.join(config["runs_directory"], "{SAMPLES}_R1.fastq.gz"),
+        R2 = os.path.join(config["runs_directory"], "{SAMPLES}_R2.fastq.gz")
+    output:
+        SAM = os.path.join("02_SAM/", "{SAMPLES}.sam")
+    params:
+        genome = os.path.join(config['genome_folder'], "22.fa"),
+        threads = str(config["bwa_threads"])
+    shell:
+        " bwa mem -t 4 {params.genome} {input.R1} {input.R2} > {output.SAM} "
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# SAM filtering for mapping quality and BAM generation | BAM MT-reads removal
+rule E_sam_to_bam:
+    input:
+        SAM = os.path.join("02_SAM/", "{SAMPLES}.sam")
+    output:
+        filtBAM = temp(os.path.join("03_BAM/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), ".bam"]))),
+        filtBAM_sorted = temp(os.path.join("03_BAM/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted.bam"]))),
+        filtBAM_sorted_index = temp(os.path.join("03_BAM/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted.bam.bai"]))),
+        flagstat_on_unfiltered_BAM = os.path.join("03_BAM/flagstat/", "{SAMPLES}_flagstat_UNfiltered_bam.txt"),
+        filtBAM_sorted_woMT = os.path.join("03_BAM/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT.bam"])),
+        filtBAM_sorted_woMT_index = os.path.join("03_BAM/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT.bam.bai"])),
+        flagstat_on_filtered_woMT_BAM = os.path.join("03_BAM/flagstat/", "{SAMPLES}_flagstat_filtered_bam_woMT.txt")
+    params:
+        mapq_cutoff = str(config["mapQ_cutoff"]),
+        sample = "{SAMPLES}",
+        threads = str(config["SAMtools_threads"])
+    shell:
+        """
+        echo '{params.sample}: filtering SAM and generate BAM...'
+        samtools view -@{params.threads} -b -q {params.mapq_cutoff} {input.SAM} -o {output.filtBAM}
+
+        echo '{params.sample}: sorting BAM...'
+        samtools sort -@{params.threads} {output.filtBAM} -o {output.filtBAM_sorted}
+        samtools index -@{params.threads} -b {output.filtBAM_sorted} {output.filtBAM_sorted_index}
+
+        echo '{params.sample}: Getting flagstat from unfiltered BAM...'
+        samtools flagstat {output.filtBAM_sorted} -@{params.threads} > {output.flagstat_on_unfiltered_BAM}
+
+        echo '{params.sample}: Removing MT reads from BAM...'
+        samtools idxstats -@{params.threads} {output.filtBAM_sorted} | cut -f 1 | grep -v MT | xargs samtools view -@{params.threads} -b {output.filtBAM_sorted} > {output.filtBAM_sorted_woMT}
+        samtools index -@{params.threads} -b {output.filtBAM_sorted_woMT} {output.filtBAM_sorted_woMT_index}
+
+        echo '{params.sample}: Getting flagstat from BAM without MT-DNA...'
+        samtools flagstat {output.filtBAM_sorted_woMT} -@{params.threads} > {output.flagstat_on_filtered_woMT_BAM}
+        """
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# BAM duplicates removal and relative flagstat | BAM reads shifting
+rule F_bam_deduplication:
+    input:
+        BAM = ancient(os.path.join("03_BAM/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT.bam"])))
+    output:
+        dedup_BAM = temp(os.path.join("04_BAM_dedup/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_dedup.bam"]))),
+        dedup_BAM_index = temp(os.path.join("04_BAM_dedup/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_dedup.bai"]))),
+        dedup_BAM_metrics = os.path.join("04_BAM_dedup/metrics", "{SAMPLES}_metrics_woMT_dedup_bam.txt"),
+        dedup_BAM_flagstat = os.path.join("04_BAM_dedup/flagstat/", "{SAMPLES}_flagstat_filtered_bam_woMT_dedup.txt")
+    params:
+        sample = "{SAMPLES}",
+        threads = str(config["SAMtools_threads"]),
+        minFragmentLength = config["minFragmentLength"],
+        maxFragmentLength = config["maxFragmentLength"],
+        rm_dup = config["remove_duplicates"]
+    shell:
+        """
+        echo '{params.sample}: Removing BAM duplicates...'
+        picard MarkDuplicates CREATE_INDEX=true INPUT={input.BAM} OUTPUT={output.dedup_BAM} METRICS_FILE={output.dedup_BAM_metrics} ASSUME_SORT_ORDER=coordinate REMOVE_DUPLICATES={params.rm_dup} VALIDATION_STRINGENCY=STRICT
+        samtools flagstat {output.dedup_BAM} -@{params.threads} > {output.dedup_BAM_flagstat}
+        """
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# BAM reads shifting
+rule G_bam_shifting:
+    input:
+        dedup_BAM = os.path.join("04_BAM_dedup/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_dedup.bam"])),
+        dedup_BAM_index = os.path.join("04_BAM_dedup/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_dedup.bai"]))
+    output:
+        dedup_BAM_shifted_toSort = temp(os.path.join("04_BAM_dedup/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_dedup_shifted.ToSort.bam"]))),
+        dedup_BAM_shifted_sorted = os.path.join("04_BAM_dedup/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_sorted.bam"])),
+        dedup_BAM_shifted_sorted_index = os.path.join("04_BAM_dedup/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_sorted.bam.bai"])),
+        dedup_BAM_flagstat_shifted_sorted = os.path.join("04_BAM_dedup/flagstat/", "{SAMPLES}_flagstat_woMT_dedup_shifted_sorted.txt")
+    params:
+        sample = "{SAMPLES}",
+        threads = str(config["SAMtools_threads"]),
+        minFragmentLength = str(config["minFragmentLength"]),
+        maxFragmentLength = str(config["maxFragmentLength"])
+    shell:
+        """
+        echo '{params.sample}: Shifting reads in BAM...'
+        alignmentSieve -p {params.threads} --ATACshift --bam {input.dedup_BAM} --outFile {output.dedup_BAM_shifted_toSort} --minFragmentLength {params.minFragmentLength} --maxFragmentLength {params.maxFragmentLength}
+
+        echo '{params.sample}: Sorting shifted BAM...'
+        samtools sort -@{params.threads} {output.dedup_BAM_shifted_toSort} -o {output.dedup_BAM_shifted_sorted}
+        samtools index -@{params.threads} -b {output.dedup_BAM_shifted_sorted} {output.dedup_BAM_shifted_sorted_index}
+
+        echo '{params.sample}: Getting flagstat from shifted BAM...'
+        samtools flagstat {output.dedup_BAM_shifted_sorted} -@{params.threads} > {output.dedup_BAM_flagstat_shifted_sorted}
+
+        echo '------------------------------------------------------------------------'
+        """
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# FastQC on BAMs
+rule H_fastQC_BAMs:
+    input:
+        dedup_BAM = ancient(os.path.join("04_BAM_dedup/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_dedup.bam"]))),
+        dedup_BAM_index = temp(os.path.join("04_BAM_dedup/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_dedup.bai"])))
+    output:
+        html = os.path.join("04_BAM_dedup/fastQC/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_dedup_fastqc.html"])),
+        zip = os.path.join("04_BAM_dedup/fastQC/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_dedup_fastqc.zip"]))
+    params:
+        fastQC_BAMs_outdir = os.path.join(config["output_directory"], "04_BAM_dedup/fastQC/")
+    shell:
+        " fastqc --outdir {params.fastQC_BAMs_outdir} {input.dedup_BAM} "
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# Perform multiQC for BAMs
+rule I_multiQC_BAMs:
+    input:
+        BAM_fastqc_zip = ancient(expand(os.path.join("04_BAM_dedup/fastQC/", "{sample}_mapQ{MAPQ}_sorted_woMT_dedup_fastqc.zip"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"])))
+    output:
+        multiqcReportBAM = "04_BAM_dedup/fastQC/multiQC_dedup_bams/multiQC_report_BAMs_dedup.html"
+    params:
+        fastQC_BAM_reports = os.path.join("04_BAM_dedup/fastQC/", "*.zip"),
+        multiQC_BAM_outdir = os.path.join(config["output_directory"], "04_BAM_dedup/fastQC/multiQC_dedup_bams/")
+    shell:
+        " multiqc -f --outdir {params.multiQC_BAM_outdir} -n multiQC_report_BAMs_dedup.html {params.fastQC_BAM_reports} "
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# Perform fragment size distribution plot
+rule J_fragment_size_distribution:
+    input:
+        BAM = ancient(os.path.join("04_BAM_dedup/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_dedup.bam"]))),
+        BAM_index = ancient(os.path.join("04_BAM_dedup/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_dedup.bai"])))
+    output:
+        plot = os.path.join("04_BAM_dedup/fragmentSizeDistribution_plots/", "{SAMPLES}_fragment_size_distribution.pdf")
+    params:
+        sample = "{SAMPLES}",
+        plotFormat = config["plot_format"],
+        threads = str(config["threads_bamPEFragmentSize"]),
+        binSize = str(config["window_length"]),
+        blacklist = config["blacklist_file"]
+    shell:
+        " bamPEFragmentSize \
+        -p {params.threads} \
+        -b {input.BAM} \
+        --plotFileFormat {params.plotFormat} \
+        --plotTitle {params.sample} \
+        --samplesLabel {params.sample} \
+        --binSize {params.binSize} \
+        --blackListFileName {params.blacklist} \
+        -o {output.plot} "
+
+
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# Computing the scaling factor
+rule K_computing_scaling_factor:
+    input:
+        dedup_BAM_shifted_sorted = ancient(expand(os.path.join("04_BAM_dedup/", "{sample}_mapQ{MAPQ}_woMT_dedup_shifted_sorted.bam"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"]))),
+        dedup_BAM_shifted_sorted_index = ancient(expand(os.path.join("04_BAM_dedup/", "{sample}_mapQ{MAPQ}_woMT_dedup_shifted_sorted.bam.bai"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"])))
+    output:
+        npz_results = temp("05_Normalization/scalingFactor/scalingFactor_results.npz"),
+        txt_result = "05_Normalization/scalingFactor/scalingFactor_results.txt"
+    params:
+        # multiBamSummary bins
+        labels = expand("{sample}", sample=SAMPLENAMES),
+        threads = str(config["multiBamSummary_threads"]),
+        blacklist = config["blacklist_file"],
+        minFragmentLength = str(config["minFragmentLength"]),
+        maxFragmentLength = str(config["maxFragmentLength"]),
+        binSize = str(config["window_length"]),
+    shell:
+        "multiBamSummary bins \
+        -p {params.threads} \
+        --bamfiles {input.dedup_BAM_shifted_sorted} \
+        -o {output.npz_results} \
+        --blackListFileName {params.blacklist} \
+        --scalingFactors {output.txt_result} \
+        --minFragmentLength {params.minFragmentLength} \
+        --maxFragmentLength {params.maxFragmentLength} \
+        --binSize {params.binSize} \
+        --labels {params.labels} "
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+#  Generate config file for HMCcan
+rule L_HMCan_config_file:
+    input:
+        dir = ancient(os.path.dirname("05_Normalization/HMCan_output/"))
+    output:
+        HMCan_config = "05_Normalization/HMCan_output/CONFIGURATION_file_HMCan.txt"
+    params:
+        # multiBamSummary bins
+        labels = expand("{sample}", sample=SAMPLENAMES),
+        threads = str(config["multiBamSummary_threads"]),
+        blacklist = config["blacklist_file"],
+        minFragmentLength = str(config["minFragmentLength"]),
+        maxFragmentLength = str(config["maxFragmentLength"]),
+        binSize = str(config["window_length"]),
+        # HMCan config
+        format = config["format"],
+        GCIndex = config["GCIndex"],
+        smallBinLength = config["smallBinLength"],
+        largeBinLength = config["largeBinLength"],
+        genomePath = config["genome_folder"],
+        pvalueThreshold = config["pvalueThreshold"],
+        mergeDistance = config["mergeDistance"],
+        iterationThreshold = config["iterationThreshold"],
+        finalThreshold = config["finalThreshold"],
+        maxIter = config["maxIter"],
+        PrintWig = config["PrintWig"],
+        blackListFile = config["blacklist_file"],
+        PrintPosterior = config["PrintPosterior"],
+        PrintBedGraph = config["PrintBedGraph"],
+        CallPeaks = config["CallPeaks"],
+        pairedEnds = config["pairedEnds"],
+        Type = config["Type"],
+        GCmergeDistance = config["GCmergeDistance"],
+        RemoveDuplicates = config["RemoveDuplicates"],
+        CNAnormalization = config["CNAnormalization"]
+    shell:
+        """
+        echo format {params.format} > {output.HMCan_config}
+        echo GCIndex {params.GCIndex} >> {output.HMCan_config}
+        echo smallBinLength {params.smallBinLength} >> {output.HMCan_config}
+        echo largeBinLength {params.largeBinLength} >> {output.HMCan_config}
+        echo genomePath {params.genomePath} >> {output.HMCan_config}
+        echo pvalueThreshold {params.pvalueThreshold} >> {output.HMCan_config}
+        echo mergeDistance {params.mergeDistance} >> {output.HMCan_config}
+        echo iterationThreshold {params.iterationThreshold} >> {output.HMCan_config}
+        echo finalThreshold {params.finalThreshold} >> {output.HMCan_config}
+        echo maxIter {params.maxIter} >> {output.HMCan_config}
+        echo PrintWig {params.PrintWig} >> {output.HMCan_config}
+        echo blackListFile {params.blackListFile} >> {output.HMCan_config}
+        echo PrintPosterior {params.PrintPosterior} >> {output.HMCan_config}
+        echo PrintBedGraph {params.PrintBedGraph} >> {output.HMCan_config}
+        echo CallPeaks {params.CallPeaks} >> {output.HMCan_config}
+        echo pairedEnds {params.pairedEnds} >> {output.HMCan_config}
+        echo Type {params.Type} >> {output.HMCan_config}
+        echo GCmergeDistance {params.GCmergeDistance} >> {output.HMCan_config}
+        echo RemoveDuplicates {params.RemoveDuplicates} >> {output.HMCan_config}
+        echo CNAnormalization {params.CNAnormalization} >> {output.HMCan_config}
+        """
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# CNV correction by HMCan
+rule M_signal_correction_for_CNVs:
+    input:
+        dedup_BAM_shifted_sorted = ancient(os.path.join("04_BAM_dedup/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_sorted.bam"]))),
+        dedup_BAM_shifted_sorted_index = ancient(os.path.join("04_BAM_dedup/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_sorted.bam.bai"]))),
+        config_file = "05_Normalization/HMCan_output/CONFIGURATION_file_HMCan.txt",
+    output:
+        HMCan_regions = os.path.join("05_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_regions.bed"])),
+        HMCan_peaks = os.path.join("05_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_peaks.narrowPeak"])),
+        HMCan_CNV_profile = os.path.join("05_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_CNV_profile.txt"]))
+    params:
+        HMCan_path = config["HMCan_path"],
+        basename = os.path.join("05_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted"]))
+    threads:
+        config["HMCan_threads"]
+    shell:
+        " {params.HMCan_path} {input.dedup_BAM_shifted_sorted} - {input.config_file} {params.basename} --threads {threads}"
