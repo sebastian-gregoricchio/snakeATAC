@@ -1,3 +1,4 @@
+[![Snakemake](https://img.shields.io/badge/snakemake-≥6.3.0-brightgreen.svg)](https://snakemake.github.io)
 ![release](https://img.shields.io/github/v/release/sebastian-gregoricchio/snakeATAC)
 ![update](https://badges.pufler.dev/updated/sebastian-gregoricchio/snakeATAC)
 ![visits](https://badges.pufler.dev/visits/sebastian-gregoricchio/snakeATAC)
