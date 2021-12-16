@@ -1,0 +1,23 @@
+name: snakeATAC
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - snakemake ==3.13.3
+  - bioconda::fastqc ==0.11.9
+  - bioconda::bwa ==0.7.17
+  - bioconda::samtools ==1.7
+  - bioconda::deeptools ==3.5.1
+  - bioconda::bedtools ==2.30.0
+  - bioconda::picard ==2.26.6
+  - bioconda::rbase ==4.0.3
+  - bioconda::macs2 ==2.2.7.1
+  - conda-forge python ==3.6.13
+  - conda-forge git ==2.30.2
+  - pip
+  - pip:
+        - multiqc==1.11
+        - numpy==1.19.5
+        - pandas==1.1.5
+        - matplotlib-base=3.3.4
+        - bioinfokit=2.0.8
