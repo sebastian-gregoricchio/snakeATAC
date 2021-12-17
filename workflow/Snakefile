@@ -146,7 +146,12 @@ rule AAA_initialization:
         rawScores_hetamap = ancient(os.path.join(SUMMARYDIR, "Heatmap_on_rawScores_for_peaks_union_population.pdf"))
 
     shell:
-        " printf '\033[1;36mPipeline ended!\\n\033[0m' "
+        """
+        mkdir -p 05_Normalization/HMCan_output/temp_GENOME
+        rm -r 05_Normalization/HMCan_output/temp_GENOME
+
+        printf '\033[1;36mPipeline ended!\\n\033[0m'
+        """
 # ========================================================================================
 
 
@@ -232,7 +237,7 @@ rule D_bwa_align:
     output:
         SAM = os.path.join("02_SAM/", "{SAMPLES}.sam")
     params:
-        genome = os.path.join(config['oneFile_genome_folder'], "*.fa"),
+        genome = os.path.join(config["genome_folder"], "*.fa"),
         sample = "{SAMPLES}"
     threads:
         config["bwa_threads"]
@@ -464,9 +469,9 @@ rule K_computing_scaling_factor:
 if (eval(str(config["perform_HMCan_correction"])) == True):
 
     #  Generate config file for HMCcan
-    rule L1_HMCan_config_file:
+    rule L1_HMCan_config_file_and_genome_splitting:
         input:
-            dir = ancient(os.path.dirname("05_Normalization/"))
+            dir = ancient(os.path.dirname("05_Normalization/normalized_bigWigs/"))
         output:
             HMCan_config = "05_Normalization/HMCan_output/CONFIGURATION_file_HMCan.txt"
         params:
@@ -477,12 +482,15 @@ if (eval(str(config["perform_HMCan_correction"])) == True):
             minFragmentLength = str(config["minFragmentLength"]),
             maxFragmentLength = str(config["maxFragmentLength"]),
             binSize = str(config["window_length"]),
+            # faidx
+            genome = os.path.join(config["genome_folder"], "*.fa"),
+            working_dir = config["output_directory"],
             # HMCan config
             format = config["format"],
             GCIndex = config["GCIndex"],
             smallBinLength = config["smallBinLength"],
             largeBinLength = config["largeBinLength"],
-            genomePath = config["byChromosome_genome_folder"],
+            genomePath = os.path.join(config["output_directory"], "05_Normalization/HMCan_output/temp_GENOME/"),
             pvalueThreshold = config["pvalueThreshold"],
             mergeDistance = config["mergeDistance"],
             iterationThreshold = config["iterationThreshold"],
@@ -500,6 +508,15 @@ if (eval(str(config["perform_HMCan_correction"])) == True):
             CNAnormalization = config["CNAnormalization"]
         shell:
             """
+            printf '\033[1;36mSplitting the genome in single chromosomes files for HMCan normalization...\\n\033[0m'
+
+            mkdir -p {params.genomePath}
+            cd {params.genomePath}
+            faidx {params.genome} --split-files
+            cd {params.working_dir}
+
+
+
             printf '\033[1;36mReading the HMcan configuration information...\\n\033[0m'
 
             mkdir -p 05_Normalization/HMCan_output/
@@ -546,9 +563,12 @@ if (eval(str(config["perform_HMCan_correction"])) == True):
             sample = "{SAMPLES}"
         threads:
             config["HMCan_threads"]
+        resources:
+            mem_mb = 50
         shell:
             """
-            printf '\033[1;36m{params.sample}: CNV bias correction...\\n\033[0m'
+            printf '\033[1;36m{params.sample}: HMcan signal correction...\\n\033[0m'
+            ulimit -v
             {params.HMCan_path} {input.dedup_BAM_shifted_sorted} - {input.config_file} {params.basename} --threads {threads}
             """
     # ----------------------------------------------------------------------------------------
