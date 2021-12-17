@@ -11,17 +11,16 @@ output_directory: "/home/s.gregoricchio/ATAC_test/"
 
 ### General parameters
 blacklist_file: "/home/s.gregoricchio/annotations/blacklist/hg38-blacklist.v2.bed" # look at https://github.com/Boyle-Lab/Blacklist/
-
+genome_folder: "/home/s.gregoricchio/annotations/genomes/Hg38/one_file_fasta" # must contain the index as well
 
 ### FastQC
 fastQC_threads: 2
 
 
 ### Alignment and BAM generation parameters
-oneFile_genome_folder: "/home/s.gregoricchio/annotations/genomes/Hg38/one_file_fasta" # must contain the index as well
 mapQ_cutoff: 20
-bwa_threads: 8
-SAMtools_threads: 6
+bwa_threads: 4
+SAMtools_threads: 4
 remove_duplicates: "true" # only "true" or "false", the output name will be always '*dedup*'
 
 
@@ -40,19 +39,18 @@ window_length: 1000
 multiBamSummary_threads: 6
 
 
+# -------------------------------------------------------------------------------------------
 ### HMcan parameters
 # General
 perform_HMCan_correction: "False"
 HMCan_path: "/home/s.gregoricchio/HMCan-master/src/HMCan"
 HMCan_threads: 12
-byChromosome_genome_folder: "/home/s.gregoricchio/annotations/genomes/Hg38/by_chromosome"
 
 # Config file --> see https://bitbucket.org/pyminer/hmcan/src/master/
 format: "BAM"
 GCIndex: "/home/s.gregoricchio/HMCan-master/data/GC_profile_25KbWindow_Mapp100bp_hg38.cnp"
 smallBinLength: 5
 largeBinLength: 25000
-#genomePath: "/home/s.gregoricchio/annotations/genomes/Hg38/by_chromosome" # A path to chromosome sequences in .fa format. Each chromosome should be located in a separate file.
 pvalueThreshold: 0.001
 mergeDistance: 0
 iterationThreshold: 5
@@ -67,8 +65,10 @@ Type: "ATAC-seq"
 GCmergeDistance: 1000
 RemoveDuplicates: "False" # Default "False" because already performed by PICARD
 CNAnormalization: "True"
+# -------------------------------------------------------------------------------------------
 
 
+# -------------------------------------------------------------------------------------------
 ### Bam normalization, signal file creation, and peakCalling (***when HMcan is skipped***; perform_HMCan_correction: "False")
 bigWig_binSize: 5
 bamCoverage_threads: 8
@@ -78,9 +78,10 @@ compute_model: "False"
 call_summits: "True"
 shift: 100 # for single nucleosome detectio use -> 37
 extsize: 200 # for single nucleosome detectio use -> 73
+# -------------------------------------------------------------------------------------------
 
 
-### Samples comparison (--> multiBigwigSummary | plotPCA | plotCorrelation, from deeptools)
+### Samples comparison for overall variance extimation (--> multiBigwigSummary | plotPCA | plotCorrelation, from deeptools)
 binning_window_size: 10000 #bp
 threads_multiBigwigSummary: 4
 heatmap_color: "coolwarm"
