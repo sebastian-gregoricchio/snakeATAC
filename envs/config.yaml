@@ -1,0 +1,110 @@
+# This .yaml cofinguration file contains all variables used by the snakemake pipeline
+# DO NOT CHANGE parameter names without changing it in Snakefile as well
+# On the other hand, some parameter values have to be inevitably modifed
+# **********************************************************************************************************************************
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ ESSENTIAL PARAMETERS @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+### 0. General parameters  =========================================================================================================
+# 0.1. Project path
+runs_directory: "/home/s.gregoricchio/ATAC_test/00_runs/"
+output_directory: "/home/s.gregoricchio/ATAC_test/"
+
+# Genome and black-listed regions
+blacklist_file: "/home/s.gregoricchio/annotations/blacklist/hg38-blacklist.v2.bed" # look at https://github.com/Boyle-Lab/Blacklist/
+genome_folder: "/home/s.gregoricchio/annotations/genomes/Hg38/one_file_fasta" # must contain the index as well
+
+# Type of signal correction
+perform_HMCan_correction: "False"   #
+      # If 'True' the signal will be corrected for the presence of CNVs
+      # and the peak calling will be performed by HMCan instead of MACS2
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+
+### 1. FastQC  ---------------------------------------------------------------------------------------------------------------------
+fastQC_threads: 2
+
+
+
+### 2. Alignment and BAM generation parameters  ------------------------------------------------------------------------------------
+bwa_threads: 8
+mapQ_cutoff: 20
+SAMtools_threads: 8
+remove_duplicates: "true" # only "true" or "false", the output name will be always '*dedup*'
+
+
+
+### 3. BAM reads Shifting (deeptools -> alignmentSieve)  ---------------------------------------------------------------------------
+minFragmentLength: 0
+maxFragmentLength: 0
+
+
+
+### 4. Fragments size distribution (deeptools -> bamPEFragmentSize)  ---------------------------------------------------------------
+plot_format: "pdf"
+threads_bamPEFragmentSize: 6
+window_length: 1000
+
+
+
+### 5. Scaling factor computation (deeptools -> multiBamSummary)  ------------------------------------------------------------------
+multiBamSummary_threads: 6
+
+
+
+
+#$$$ ********************************** REQUIRED ONLY IF 'perform_HMCan_correction = "True"' ***************************************
+### 6. HMcan parameters
+# General
+HMCan_path: "/home/s.gregoricchio/HMCan-master/src/HMCan"
+HMCan_threads: 12
+chromosome_sizes_file: "/home/s.gregoricchio/UCSC/chrom.sizes/hg38.chrom.sizes"
+
+# HMCan config file --> see https://bitbucket.org/pyminer/hmcan/src/master/
+format: "BAM"
+GCIndex: "/home/s.gregoricchio/HMCan-master/data/GC_profile_25KbWindow_Mapp100bp_hg38.cnp"
+smallBinLength: 5
+largeBinLength: 25000
+pvalueThreshold: 0.001
+mergeDistance: 0
+iterationThreshold: 5
+finalThreshold: 0
+maxIter: 20
+PrintWig: "False"
+PrintPosterior: "True"
+PrintBedGraph: "True"
+CallPeaks: "True"
+pairedEnds: " True"
+Type: "ATAC-seq"
+GCmergeDistance: 1000
+RemoveDuplicates: "False" # Default "False" because already performed by PICARD
+CNAnormalization: "True"
+# ***********************************************************************************************************************************
+
+
+
+#$$$ ********************************** REQUIRED ONLY IF 'perform_HMCan_correction = "False"' ***************************************
+# -----------------------------------------------------------------------------------------------------------------------------------
+### Bam normalization, signal file creation, and peakCalling (***when HMcan is skipped***; perform_HMCan_correction: "False")
+bigWig_binSize: 5
+bamCoverage_threads: 8
+genome_size_MACS: "hs"   # hs: 2.7e9    # mm: 1.87e9    # ce: 9e7   # dm: 1.2e8
+FDR_cutoff: 0.01
+call_summits: "True"
+# ***********************************************************************************************************************************
+
+
+
+### Samples comparison for overall variance extimation (--> multiBigwigSummary | plotPCA | plotCorrelation, from deeptools) ---------
+binning_window_size: 10000 #bp
+threads_multiBigwigSummary: 4
+heatmap_color: "coolwarm"   # The available options are: (see --> https://seaborn.pydata.org/tutorial/color_palettes.html)
+                              # ‘Accent’, ‘Blues’, ‘BrBG’, ‘BuGn’, ‘BuPu’, ‘CMRmap’, ‘Dark2’, ‘GnBu’, ‘Greens’, ‘Greys’,
+                              # ‘OrRd’, ‘Oranges’, ‘PRGn’, ‘Paired’, ‘Pastel1’, ‘Pastel2’, ‘PiYG’, ‘PuBu’, ‘PuBuGn’, ‘PuOr’, ‘PuRd’,
+                              # ‘Purples’, ‘RdBu’, ‘RdGy’, ‘RdPu’, ‘RdYlBu’, ‘RdYlGn’, ‘Reds’, ‘Set1’, ‘Set2’, ‘Set3’, ‘Spectral’,
+                              # ‘Wistia’, ‘YlGn’, ‘YlGnBu’, ‘YlOrBr’, ‘YlOrRd’, ‘afmhot’, ‘autumn’, ‘binary’, ‘bone’, ‘brg’, ‘bwr’,
+                              # ‘cividis’, ‘cool’, ‘coolwarm’, ‘copper’, ‘cubehelix’, ‘flag’, ‘gist_earth’, ‘gist_gray’, ‘gist_heat’,
+                              # ‘gist_ncar’, ‘gist_rainbow’, ‘gist_stern’, ‘gist_yarg’, ‘gnuplot’, ‘gnuplot2’, ‘gray’, ‘hot’, ‘hsv’,
+                              # ‘icefire’, ‘inferno’, ‘jet’, ‘magma’, ‘mako’, ‘nipy_spectral’, ‘ocean’, ‘pink’, ‘plasma’, ‘prism’,
+                              # ‘rainbow’, ‘rocket’, ‘seismic’, ‘spring’, ‘summer’, ‘tab10’, ‘tab20’, ‘tab20b’, ‘tab20c’, ‘terrain’,
+                              # ‘twilight’, ‘twilight_shifted’, ‘viridis’, ‘vlag’, ‘winter’
