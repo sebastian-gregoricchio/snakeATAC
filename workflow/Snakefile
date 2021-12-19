@@ -30,12 +30,6 @@ else:
     BINS=config["bigWig_binSize"]
 
 
-if (eval(str(config["compute_model"])) == True):
-    MACSMODEL=""
-else:
-    MACSMODEL="--nomodel"
-
-
 if (eval(str(config["call_summits"])) == True):
     SUMMITS="--call-summits"
 else:
@@ -67,7 +61,6 @@ if (eval(str(config["perform_HMCan_correction"]))):
 else:
     norm_outputs.append(expand(os.path.join("06_Peaks_MACS2/", "{sample}_mapQ{MAPQ}_woMT_dedup_shifted_FDR{fdr}_peaks.xls"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"]), fdr=str(config["FDR_cutoff"]))) # peaks_xls
     norm_outputs.append(expand(os.path.join("06_Peaks_MACS2/", "{sample}_mapQ{MAPQ}_woMT_dedup_shifted_FDR{fdr}_peaks.narrowPeak"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"]), fdr=str(config["FDR_cutoff"]))) # narrowPeaks
-    norm_outputs.append(expand(os.path.join("06_Peaks_MACS2/", "{sample}_mapQ{MAPQ}_woMT_dedup_shifted_FDR{fdr}_summits.bed"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"]), fdr=str(config["FDR_cutoff"]))) # summits
 
 # ========================================================================================
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -145,10 +138,18 @@ rule AAA_initialization:
         zScores_hetamap = ancient(os.path.join(SUMMARYDIR, "Heatmap_on_zScores_for_peaks_union_population.pdf")),
         rawScores_hetamap = ancient(os.path.join(SUMMARYDIR, "Heatmap_on_rawScores_for_peaks_union_population.pdf"))
 
+    params:
+        summary_file = str(os.path.join(SUMMARYDIR, "counts_summary.txt"))
+
     shell:
         """
         mkdir -p 05_Normalization/HMCan_output/temp_GENOME
         rm -r 05_Normalization/HMCan_output/temp_GENOME
+
+        uniq -u {params.summary_file} > summary_file.temp
+        (head -n 1 summary_file.temp && tail -n +2 summary_file.temp | sort -k 1) > {params.summary_file}
+        rm summary_file.temp
+
 
         printf '\033[1;36mPipeline ended!\\n\033[0m'
         """
@@ -231,11 +232,11 @@ rule C_multiQC_raw:
 # Reads alignement
 rule D_bwa_align:
     input:
-        multiqcReportRaw = "01_fastQC_raw/multiQC_raw/multiQC_report_fastqRaw.html",
-        R1 = os.path.join(config["runs_directory"], "{SAMPLES}_R1.fastq.gz"),
-        R2 = os.path.join(config["runs_directory"], "{SAMPLES}_R2.fastq.gz")
+        multiqcReportRaw = ancient("01_fastQC_raw/multiQC_raw/multiQC_report_fastqRaw.html"),
+        R1 = ancient(os.path.join(config["runs_directory"], "{SAMPLES}_R1.fastq.gz")),
+        R2 = ancient(os.path.join(config["runs_directory"], "{SAMPLES}_R2.fastq.gz"))
     output:
-        SAM = os.path.join("02_SAM/", "{SAMPLES}.sam")
+        SAM = protected(os.path.join("02_SAM/", "{SAMPLES}.sam"))
     params:
         genome = os.path.join(config["genome_folder"], "*.fa"),
         sample = "{SAMPLES}"
@@ -465,7 +466,7 @@ rule K_computing_scaling_factor:
 # START OF CONDITONAL NORMALIZATION SECTION: HMCan (1) vs Sequencing deepth (2)
 # ****************************************************************************************
 # Run HMCan normalization if required --> perform_HMCan_correction: "False"
-# ----------------------------------------------------------------------------------------
+# ****************************************************************************************
 if (eval(str(config["perform_HMCan_correction"])) == True):
 
     #  Generate config file for HMCcan
@@ -556,7 +557,7 @@ if (eval(str(config["perform_HMCan_correction"])) == True):
             HMCan_regions = os.path.join("05_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_regions.bed"])),
             HMCan_peaks = os.path.join("05_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_peaks.narrowPeak"])),
             HMCan_CNV_profile = os.path.join("05_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_CNV_profile.txt"])),
-            HMCan_bedGraph = os.path.join("05_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted.bedGraph"]))
+            HMCan_bedGraph = temp(os.path.join("05_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted.bedGraph"])))
         params:
             HMCan_path = config["HMCan_path"],
             basename = os.path.join("05_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted"])),
@@ -568,7 +569,6 @@ if (eval(str(config["perform_HMCan_correction"])) == True):
         shell:
             """
             printf '\033[1;36m{params.sample}: HMcan signal correction...\\n\033[0m'
-            ulimit -v
             {params.HMCan_path} {input.dedup_BAM_shifted_sorted} - {input.config_file} {params.basename} --threads {threads}
             """
     # ----------------------------------------------------------------------------------------
@@ -577,22 +577,40 @@ if (eval(str(config["perform_HMCan_correction"])) == True):
     # Normalized bigWig generation
     rule N1_bigWig_CNV_adjusted_signal:
         input:
-            HMCan_bedGraph = ancient(os.path.join("05_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted.bedGraph"])))
+            HMCan_bedGraph = ancient(os.path.join("05_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted.bedGraph"]))),
+            scaling_factors = ancient("05_Normalization/scalingFactor/scalingFactor_results.txt")
         output:
+            norm_bdg = temp(os.path.join("05_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_NORMALIZED.bedGraph"]))),
             norm_bw = os.path.join("05_Normalization/normalized_bigWigs/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_normalized_bs", str(config["smallBinLength"]), ".bw"]))
         params:
-            sample = "{SAMPLES}"
+            sample = "{SAMPLES}",
+            chrSizes = config["chromosome_sizes_file"]
         threads:
             config["HMCan_threads"]
-        shell:
-            """
-            printf '\033[1;36m{params.sample}: Normalization of the corrected signal and generation of the bigWig file...\\n\033[0m'
-            echo Cooming soon
-            """ #********************************************************
+        run:
+            shell("printf '\033[1;36m{params.sample}: Normalization of the corrected signal and generation of the bigWig file...\\n\033[0m'")
 
-# ----------------------------------------------------------------------------------------
-else: # Skip HMCan and perform a classical "sequencing-depth" normalization
+            # Import bedGraph and scaling factor
+            import pandas as pd
+            bdg = pd.read_csv(str(input.HMCan_bedGraph),  sep='\s+', engine='python', header=None)
+            factor = pd.read_csv(str(input.scaling_factors),  sep='\s+', engine='python')
+            factor = factor[factor['sample']==params.sample].iloc[0,1]
+
+            # Normalize the bedGraph scores
+            bdg[3] = factor * bdg[3]
+
+            # Export normalized_bedGraph
+            bdg.to_csv(output.norm_bdg, encoding='utf-8', index=False, header=False, sep='\t')
+
+            # Converting normalized_bedGraph to BigWig
+            shell("bedGraphToBigWig {output.norm_bgd} {params.chrSizes} {output.norm_bw}")
     # ----------------------------------------------------------------------------------------
+
+
+
+# ********************************************************************************************
+else: # Skip HMCan and perform a classical "sequencing-depth" normalization
+# ********************************************************************************************
     # bigWig generation from BAM (not corrected by HMCan)
     rule L2_bigWig_normalization_woCorrection:
         input:
@@ -630,9 +648,6 @@ else: # Skip HMCan and perform a classical "sequencing-depth" normalization
             genomeSize = str(config["genome_size_MACS"]),
             FDR = str(config["FDR_cutoff"]),
             basename = ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_FDR", str(config["FDR_cutoff"])]),
-            shift = config["shift"],
-            extsize = config["extsize"],
-            model = MACSMODEL,
             summits = SUMMITS,
             sample = "{SAMPLES}"
         log:
@@ -645,14 +660,14 @@ else: # Skip HMCan and perform a classical "sequencing-depth" normalization
 
             macs2 callpeak \
             -t {input.dedup_BAM_shifted_sorted} \
- 	        -f BAMPE \
             -g {params.genomeSize} \
 	        -n {params.basename} \
             -q {params.FDR} \
+            -f BAMPE \
 	        --outdir 06_Peaks_MACS2 \
-            --shift {params.shift} \
-            --extsize {params.extsize} \
-            {params.model} {params.summits} 2> {log.log}
+            --keep-dup all \
+            --nolambda \
+            {params.summits} 2> {log.log}
             """
     # ----------------------------------------------------------------------------------------
 # ****************************************************************************************
@@ -670,22 +685,24 @@ rule Z1_counts_summary:
         flagstat_on_filtered_woMT_BAM = ancient(os.path.join("03_BAM/flagstat/", "{SAMPLES}_flagstat_filtered_bam_woMT.txt")),
         dedup_BAM_flagstat = ancient(os.path.join("04_BAM_dedup/flagstat/", "{SAMPLES}_flagstat_filtered_bam_woMT_dedup.txt")),
         dedup_BAM_shifted_sorted_flagstat = ancient(os.path.join("04_BAM_dedup/flagstat/", "{SAMPLES}_flagstat_woMT_dedup_shifted_sorted.txt")),
-        scaling_factors = ancient("05_Normalization/scalingFactor/scalingFactor_results.txt")
+        scaling_factors = ancient("05_Normalization/scalingFactor/scalingFactor_results.txt"),
+        peaks_file = os.path.join(PEAKSDIR, ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_FDR", str(config["FDR_cutoff"]), "_peaks.narrowPeak"]))
     output:
         temp_file = temp(os.path.join(SUMMARYDIR, "{SAMPLES}_counts_summary.temp"))
     params:
         sample = "{SAMPLES}",
-        sample_number = (len(SAMPLENAMES) + 1),
+        samples_check_string = str('|'.join(SAMPLENAMES)),
+        sample_number = (len(SAMPLENAMES)),
         peaks_dir = PEAKSDIR,
         summary_file = os.path.join(SUMMARYDIR, "counts_summary.txt")
     shell:
         """
         if test -f {params.summary_file}; then
-            if [ "$(wc -l {params.summary_file} | cut -f 1 -d ' ')" -gt "{params.sample_number}" ]; then
+            if [ "$(grep -E '{params.samples_check_string}' {params.summary_file} | cut -f 1 | sort --unique | wc -l | cut -f 1 -d ' ')" -gt "{params.sample_number}" ]; then
                 rm {params.summary_file}
                 printf '\033[1;36mGeneration of a general counts summary table...\\n\033[0m'
                 printf Sample'\\t'Reads_R1'\\t'Reads_R2'\\t'Total'\\t'unfiltered_BAM'\\t'Percentage_MT'\\t'dedup_BAM'\\t'duplicated_reads'\\t'shifted_BAM'\\t'loss_post_shifting'\\t'scaling_factor'\\t'peaks'\\n' > {params.summary_file}
-            else [ "$(wc -l {params.summary_file} | cut -f 1 -d ' ')" -eq "{params.sample_number}" ]
+            else [ "$(grep -E '{params.samples_check_string}' {params.summary_file} | cut -f 1 | sort --unique | wc -l | cut -f 1 -d ' ')" -eq "{params.sample_number}" ]
                 echo {params.sample} > {output.temp_file}
             fi
         else
@@ -695,7 +712,9 @@ rule Z1_counts_summary:
 
 
 
-        if [ "$(wc -l {params.summary_file} | cut -f 1 -d ' ')" -lt "{params.sample_number}" ]; then
+        if [ "$(grep -E '{params.samples_check_string}' {params.summary_file} | cut -f 1 | sort --unique | wc -l | cut -f 1 -d ' ')" -lt "{params.sample_number}" ]; then
+            printf '\033[1;36mGeneration of a general counts summary table...\\n\033[0m'
+
             R1=$(($(zcat {input.R1} | wc -l) / 4))
             R2=$(($(zcat {input.R2} | wc -l) / 4))
             TOTAL=$((R1 + R2))
@@ -716,6 +735,10 @@ rule Z1_counts_summary:
 
             printf {params.sample}'\\t'$R1'\\t'$R2'\\t'$TOTAL'\\t'$unfilteredBAM'\\t'$percMT'\\t'$dedupBAM'\\t'$dedupREADS'\\t'$shiftedBAM'\\t'$lossReads'\\t'$FACTOR'\\t'$peaks'\\n' >> {params.summary_file}
             printf {params.sample}'\\t'$R1'\\t'$R2'\\t'$TOTAL'\\t'$unfilteredBAM'\\t'$percMT'\\t'$dedupBAM'\\t'$dedupREADS'\\t'$shiftedBAM'\\t'$lossReads'\\t'$FACTOR'\\t'$peaks'\\n' > {output.temp_file}
+
+            uniq -u {params.summary_file} > summary_file.temp
+            (head -n 1 summary_file.temp && tail -n +2 summary_file.temp | sort -k 1) > {params.summary_file}
+            rm summary_file.temp
         fi
         """
 
@@ -777,7 +800,8 @@ rule Z2_PCA_and_samples_correlation_heatmap:
 # Absolute peaks file and relative matrix score generation
 rule Z3_all_peaks_file_and_score_matrix:
     input:
-        norm_bw = ancient(expand(os.path.join("05_Normalization/normalized_bigWigs/", "{sample}_mapQ{MAPQ}_woMT_dedup_shifted_normalized_bs{binSize}.bw"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"]), binSize=str(BINS)))
+        norm_bw = ancient(expand(os.path.join("05_Normalization/normalized_bigWigs/", "{sample}_mapQ{MAPQ}_woMT_dedup_shifted_normalized_bs{binSize}.bw"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"]), binSize=str(BINS))),
+        peaks_file = (expand(os.path.join(str(PEAKSDIR), "{sample}_mapQ{MAPQ}_woMT_dedup_shifted_FDR{fdr}_peaks.narrowPeak"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"]), fdr=str(config["FDR_cutoff"])))
     output:
         concatenation_bed = temp(os.path.join(SUMMARYDIR, "temp_all_samples_peaks_concatenation.bed")),
         concatenation_bed_collapsed = temp(os.path.join(SUMMARYDIR, "temp_all_samples_peaks_concatenation_collapsed.bed")),
@@ -837,11 +861,14 @@ rule Z4_peaks_zScores_and_heatmap:
         matrix = matrix[matrix.columns[3:]]
         matrix = matrix.set_index('peak_ID')
 
-        # Import required to avoid the use of X11
+        # Required to avoid the use of X11
         import matplotlib as mpl
         mpl.use('Agg')
         import matplotlib.pyplot as plt
 
+        # Required to avoid errors in scipy iterations
+        import sys
+        sys.setrecursionlimit(100000)
 
         # Generation of the rawScore heatmap and clustering
         from bioinfokit import analys, visuz
