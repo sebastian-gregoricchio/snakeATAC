@@ -5,7 +5,7 @@
 [![license](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://sebastian-gregoricchio.github.io/snakeATAC/LICENSE.md/LICENSE)
 <!---![downloads](https://img.shields.io/github/downloads/sebastian-gregoricchio/Rseb/total.svg)--->
 
-# snakeATAC <img src="https://sebastian-gregoricchio.github.io/snakeATAC/snakeATAC_logo.svg" align="right" height = 150/>
+# snakeATAC <img src="https://sebastian-gregoricchio.github.io/snakeATAC/images/snakeATAC_logo.svg" align="right" height = 150/>
 Snakemake pipeline for analysis and normalization of ATAC-seq data starting from fastq.gz files.
 
 
