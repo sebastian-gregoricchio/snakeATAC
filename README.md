@@ -3,6 +3,7 @@
 ![update](https://badges.pufler.dev/updated/sebastian-gregoricchio/snakeATAC)
 ![visits](https://badges.pufler.dev/visits/sebastian-gregoricchio/snakeATAC)
 [![license](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://sebastian-gregoricchio.github.io/snakeATAC/LICENSE.md/LICENSE)
+[![forks](https://img.shields.io/github/forks/sebastian-gregoricchio/snakeATAC?style=social)](https://github.com/sebastian-gregoricchio/snakeATAC/fork)
 <!---![downloads](https://img.shields.io/github/downloads/sebastian-gregoricchio/Rseb/total.svg)--->
 
 # snakeATAC <img src="https://sebastian-gregoricchio.github.io/snakeATAC/images/snakeATAC_logo.svg" align="right" height = 150/>
