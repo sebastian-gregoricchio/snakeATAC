@@ -10,7 +10,15 @@
 Snakemake pipeline for analysis and normalization of ATAC-seq data starting from fastq.gz files.
 
 
-
+# Changing names
+```
+for i in $(dir *f*.gz)
+do
+  R1=$(echo $i | sed 's/_1/_R1/')
+  R2=$(echo $R1 | sed 's/_2/_R2/')
+  mv $i $R2
+done
+```
 
 
 
