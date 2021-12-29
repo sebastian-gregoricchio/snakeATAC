@@ -9,14 +9,16 @@
 runs_directory: "/home/s.gregoricchio/ATAC_test/00_runs/"
 output_directory: "/home/s.gregoricchio/ATAC_test/"
 
-# Genome and black-listed regions
+# 0.2. Genome and black-listed regions
 blacklist_file: "/home/s.gregoricchio/annotations/blacklist/hg38-blacklist.v2.bed" # look at https://github.com/Boyle-Lab/Blacklist/
 genome_folder: "/home/s.gregoricchio/annotations/genomes/Hg38/one_file_fasta" # must contain the index as well
 
-# Type of signal correction
+# 0.3 Type of signal correction
 perform_HMCan_correction: "False"   #
       # If 'True' the signal will be corrected for the presence of CNVs
-      # and the peak calling will be performed by HMCan instead of MACS2
+      # and the peak calling will be performed by HMCan instead of MACS2 --> set the correct genomeSize paramater
+      #
+      # If 'False' the peak calling will be performed by MACS2 --> set the correct genomeSize paramater
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 
@@ -55,12 +57,12 @@ multiBamSummary_threads: 6
 
 #$$$ ********************************** REQUIRED ONLY IF 'perform_HMCan_correction = "True"' ***************************************
 ### 6. HMcan parameters
-# General
+# 6.1 General
 HMCan_path: "/home/s.gregoricchio/HMCan-master/src/HMCan"
 HMCan_threads: 12
 chromosome_sizes_file: "/home/s.gregoricchio/UCSC/chrom.sizes/hg38.chrom.sizes"
 
-# HMCan config file --> see https://bitbucket.org/pyminer/hmcan/src/master/
+# 6.2 HMCan config file --> see https://bitbucket.org/pyminer/hmcan/src/master/
 format: "BAM"
 GCIndex: "/home/s.gregoricchio/HMCan-master/data/GC_profile_25KbWindow_Mapp100bp_hg38.cnp"
 smallBinLength: 5
@@ -85,7 +87,7 @@ CNAnormalization: "True"
 
 #$$$ ********************************** REQUIRED ONLY IF 'perform_HMCan_correction = "False"' ***************************************
 # -----------------------------------------------------------------------------------------------------------------------------------
-### Bam normalization, signal file creation, and peakCalling (***when HMcan is skipped***; perform_HMCan_correction: "False")
+### 7. Bam normalization, signal file creation, and peakCalling (***when HMcan is skipped***; perform_HMCan_correction: "False")
 bigWig_binSize: 5
 bamCoverage_threads: 4
 genome_size_MACS: "hs"   # hs: 2.7e9    # mm: 1.87e9    # ce: 9e7   # dm: 1.2e8
@@ -95,10 +97,10 @@ call_summits: "True"
 
 
 
-### Samples comparison for overall variance extimation (--> multiBigwigSummary | plotPCA | plotCorrelation, from deeptools) ---------
+### 8. Samples comparison for overall variance extimation (--> multiBigwigSummary | plotPCA | plotCorrelation, from deeptools) ---------
 binning_window_size: 10000 #bp
 threads_multiBigwigSummary: 4
-heatmap_color: "coolwarm"   # The available options are: (see --> https://seaborn.pydata.org/tutorial/color_palettes.html)
+heatmap_color: "coolwarm"   # The available options are: (see --> https://matplotlib.org/stable/tutorials/colors/colormaps.html)
                               # ‘Accent’, ‘Blues’, ‘BrBG’, ‘BuGn’, ‘BuPu’, ‘CMRmap’, ‘Dark2’, ‘GnBu’, ‘Greens’, ‘Greys’,
                               # ‘OrRd’, ‘Oranges’, ‘PRGn’, ‘Paired’, ‘Pastel1’, ‘Pastel2’, ‘PiYG’, ‘PuBu’, ‘PuBuGn’, ‘PuOr’, ‘PuRd’,
                               # ‘Purples’, ‘RdBu’, ‘RdGy’, ‘RdPu’, ‘RdYlBu’, ‘RdYlGn’, ‘Reds’, ‘Set1’, ‘Set2’, ‘Set3’, ‘Spectral’,
