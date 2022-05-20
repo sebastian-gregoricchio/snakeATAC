@@ -6,16 +6,16 @@
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ ESSENTIAL PARAMETERS @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 ### 0. General parameters  =========================================================================================================
 # 0.1. Project path
-runs_directory: "/home/s.gregoricchio/ATAC_test/00_runs/"
-output_directory: "/home/s.gregoricchio/ATAC_test/"
+runs_directory: "/home/user/ATAC_test/00_runs/"
+output_directory: "/home/user/ATAC_test/"
 
 # 0.2 Input file extensions
 fastq_extension: ".fastq.gz"
 runs_suffix: ["_R1", "_R2"]
 
 # 0.3. Genome and black-listed regions
-blacklist_file: "/home/s.gregoricchio/annotations/blacklist/hg38-blacklist.v2.bed" # look at https://github.com/Boyle-Lab/Blacklist/
-genome_fasta: "/home/s.gregoricchio/annotations/genomes/Hg38/one_file_fasta/Homo_sapiens.GRCh38_v102.dna.primary_assembly.fa"
+blacklist_file: "/home/user/annotations/blacklist/hg38-blacklist.v2.bed" # look at https://github.com/Boyle-Lab/Blacklist/
+genome_fasta: "/home/user/annotations/genomes/Hg38/Homo_sapiens.GRCh38_v102.dna.primary_assembly.fa"
 
 # 0.4 Type of signal correction
 perform_HMCan_correction: "False"
@@ -34,7 +34,7 @@ ignore_for_normalization: "X Y MT M KI270728.1 KI270727.1 KI270442.1 KI270729.1 
 call_variants: true
 call_SNPs: true
 call_indels: true
-dbsnp_file: "/home/s.gregoricchio/annotations/gatk/dbsnp/resources_broad_hg38_v0_Homo_sapiens_assembly38.dbsnp138.vcf"
+dbsnp_file: "/home/user/annotations/gatk/dbsnp/resources_broad_hg38_v0_Homo_sapiens_assembly38.dbsnp138.vcf"
   # download also the INDEX!!!
   # https://console.cloud.google.com/storage/browser/genomics-public-data/resources/broad/hg38/v0/
 # @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
@@ -77,14 +77,14 @@ multiBamSummary_threads: 6
 #$$$ ********************************** REQUIRED ONLY IF 'perform_HMCan_correction = "True"' ***************************************
 ### 6. HMcan parameters
 # 6.1 General
-HMCan_path: "/home/s.gregoricchio/HMCan-master/src/HMCan"
+HMCan_path: "/home/user/HMCan-master/src/HMCan"
 HMCan_threads: 12
-chromosome_sizes_file: "/home/s.gregoricchio/UCSC/chrom.sizes/hg38.chrom.sizes"
+chromosome_sizes_file: "/home/user/UCSC/chrom.sizes/hg38.chrom.sizes"
 reference_sample: "NA"  #This sample will be the reference for the normalization, indicate a sample basename (without R1/2 or fastq.gz)
 
 # 6.2 HMCan config file --> see https://bitbucket.org/pyminer/hmcan/src/master/
 format: "BAM"
-GCIndex: "/home/s.gregoricchio/HMCan-master/data/GC_profile_25KbWindow_Mapp100bp_hg38.cnp"
+GCIndex: "/home/user/HMCan-master/data/GC_profile_25KbWindow_Mapp100bp_hg38.cnp"
 smallBinLength: 5
 largeBinLength: 25000
 pvalueThreshold: 0.001
