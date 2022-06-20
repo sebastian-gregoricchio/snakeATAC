@@ -165,6 +165,7 @@ rule AAA_initialization:
         # Rule counts_summary
         #temp_file_counts = ancient(expand(os.path.join(SUMMARYDIR, "{sample}_counts_summary.temp"), sample=SAMPLENAMES)),
         summary_file = os.path.join(SUMMARYDIR, "counts_summary.txt"),
+        summary_file_temp = "summary_file.temp",
 
         # Rule PCA and plotCorrelation
         correlation_outputs = correlation_outputs,
@@ -204,6 +205,8 @@ rule AAA_initialization:
 
         mkdir -p 01b_SAM_tempFolder
         rm -R 01b_SAM_tempFolder
+
+        rm {input.summary_file_temp}
 
         printf '\033[1;36mPipeline ended!\\n\033[0m'
         """
@@ -313,6 +316,7 @@ rule D_sam_to_bam:
         filtBAM_sorted = temp(os.path.join("02_BAM/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted.bam"]))),
         filtBAM_sorted_index = temp(os.path.join("02_BAM/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted.bam.bai"]))),
         flagstat_on_unfiltered_BAM = os.path.join("02_BAM/flagstat/", "{SAMPLES}_flagstat_UNfiltered_bam.txt"),
+        filtBAM_sorted_woMT_toFix = temp(os.path.join("02_BAM/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_toFix.bam"]))),
         filtBAM_sorted_woMT = os.path.join("02_BAM/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT.bam"])),
         filtBAM_sorted_woMT_index = os.path.join("02_BAM/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT.bam.bai"])),
         flagstat_on_filtered_woMT_BAM = os.path.join("02_BAM/flagstat/", "{SAMPLES}_flagstat_filtered_bam_woMT.txt")
@@ -338,7 +342,12 @@ rule D_sam_to_bam:
         samtools flagstat {output.filtBAM_sorted} -@ {params.CPUs} > {output.flagstat_on_unfiltered_BAM}
 
         printf '\033[1;36m{params.sample}: Removing MT reads from BAM...\\n\033[0m'
-        samtools idxstats {output.filtBAM_sorted} | cut -f 1 | grep -v M | xargs samtools view -@ {params.CPUs} -b {output.filtBAM_sorted} > {output.filtBAM_sorted_woMT}
+        samtools idxstats {output.filtBAM_sorted} | cut -f 1 | grep -v ^chrM | grep -v ^M | xargs samtools view -@ {params.CPUs} -b {output.filtBAM_sorted} > {output.filtBAM_sorted_woMT_toFix}
+
+        printf '\033[1;36m{params.sample}: Fixing mates in the BAM...\\n\033[0m'
+        samtools fixmate -@ {params.CPUs} -m -o bam {output.filtBAM_sorted_woMT_toFix} {output.filtBAM_sorted_woMT}
+
+        printf '\033[1;36m{params.sample}: BAM indexing...\\n\033[0m'
         samtools index -@ {params.CPUs} -b {output.filtBAM_sorted_woMT} {output.filtBAM_sorted_woMT_index}
 
         printf '\033[1;36m{params.sample}: Getting flagstat from BAM without MT-DNA...\\n\033[0m'
@@ -828,21 +837,23 @@ rule K_counts_summary:
         #scaling_factors = ancient("04_Normalization/scalingFactor/scalingFactor_results.txt"),
         peaks_file = ancient(expand(os.path.join(PEAKSDIR, ''.join(["{sample}_mapQ", str(config["mapQ_cutoff"]), "_woMT_dedup_shifted_FDR", str(config["FDR_cutoff"]), "_peaks.narrowPeak"])), sample = SAMPLENAMES))
     output:
-        summary_file = os.path.join(SUMMARYDIR, "counts_summary.txt")
+        summary_file = os.path.join(SUMMARYDIR, "counts_summary.txt"),
+        summary_file_temp = "summary_file.temp"
     params:
         build_summary_directory = os.path.dirname(SUMMARYDIR),
         R1_suffix = config['runs_suffix'][0],
         R2_suffix = config['runs_suffix'][1],
         sample_list = str(' '.join(SAMPLENAMES)),
         multiQC_report = "01_fastQC_raw/multiQC_raw/multiQC_report_fastqRaw_data/multiqc_general_stats.txt",
-        peaks_dir = PEAKSDIR
+        peaks_dir = PEAKSDIR,
+        FRiP_threshold = config["FRiP_threshold"]
     threads: 1
     shell:
         """
         mkdir -p {params.build_summary_directory}
 
         printf '\033[1;36mGeneration of a general counts summary table...\\n\033[0m'
-        printf Sample'\\t'Reads_R1'\\t'Reads_R2'\\t'Reads_total'\\t'unfiltered_BAM'\\t'Percentage_MT'\\t'dedup_BAM'\\t'duplicated_reads'\\t'shifted_BAM'\\t'loss_post_shifting'\\t'n.peaks'\\n' > {output.summary_file}
+        printf Sample'\\t'Reads_R1'\\t'Reads_R2'\\t'Reads_total'\\t'unfiltered_BAM'\\t'Percentage_MT'\\t'dedup_BAM'\\t'duplicated_reads'\\t'shifted_BAM'\\t'loss_post_shifting'\\t'n.peaks'\\t'FRiP.perc'\\t'FRiP.quality'\\n' > {output.summary_file}
 
         for NAME in {params.sample_list}
         do
@@ -864,12 +875,21 @@ rule K_counts_summary:
 
             peaks=$(wc -l {params.peaks_dir}${{NAME}}*.*Peak | cut -f 1 -d ' ')
 
-            printf ${{NAME}}'\\t'$R1'\\t'$R2'\\t'$TOTAL'\\t'$unfilteredBAM'\\t'$percMT'\\t'$dedupBAM'\\t'$dedupREADS'\\t'$shiftedBAM'\\t'$lossReads'\\t'$peaks'\\n' >> {output.summary_file}
+            awk 'BEGIN{{FS=OFS="\\t"; print "GeneID\\tChr\\tStart\\tEnd\\tStrand"}}{{print $4, $1, $2+1, $3, "."}}' {params.peaks_dir}${{NAME}}*.*Peak > {params.peaks_dir}${{NAME}}.saf
+            featureCounts -p -a {params.peaks_dir}${{NAME}}.saf -F SAF -o readCountInPeaks.txt 03_BAM_dedup/${{NAME}}_mapQ*_woMT_dedup_shifted_sorted.bam 2> subread.output.txt
+            rm {params.peaks_dir}${{NAME}}.saf
+            rm readCountInPeaks.*
+            frip=$(grep 'Successfully assigned alignments' subread.output.txt | sed -e 's/.*(//' | sed 's/%.*$//')
+            rm subread.output.txt
+            fripScore=$(echo $frip | sed 's/\\..*$//')
+            fripLabel=$(if [ $fripScore -ge {params.FRiP_threshold} ]; then echo 'good'; else echo 'bad'; fi)
+
+
+            printf ${{NAME}}'\\t'$R1'\\t'$R2'\\t'$TOTAL'\\t'$unfilteredBAM'\\t'$percMT'\\t'$dedupBAM'\\t'$dedupREADS'\\t'$shiftedBAM'\\t'$lossReads'\\t'$peaks'\\t'$frip'\\t'$fripLabel'\\n' >> {output.summary_file}
         done
 
-        uniq -u {output.summary_file} > summary_file.temp
+        uniq -u {output.summary_file} > {output.summary_file_temp}
         (head -n 1 summary_file.temp && tail -n +2 summary_file.temp | sort -k 1) > {output.summary_file}
-        rm summary_file.temp
         """
 
 
