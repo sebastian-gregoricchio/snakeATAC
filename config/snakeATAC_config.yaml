@@ -112,10 +112,11 @@ bigWig_binSize: 5
 normalization_method: "RPGC"
 bamCoverage_threads: 8
 
-# MACS2
+# MACS3
 genome_size_MACS: "hs"   # hs: 2.7e9    # mm: 1.87e9    # ce: 9e7   # dm: 1.2e8
 FDR_cutoff: 0.01
 call_summits: "True"
+FRiP_threshold: 20 #%, only used to asign a good/bad label in the sample count summary file
 
 # ***********************************************************************************************************************************
 
