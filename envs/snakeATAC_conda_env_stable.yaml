@@ -105,7 +105,7 @@ dependencies:
   - olefile=0.46=pyh9f0ad1d_1
   - openjdk=11.0.1=h516909a_1016
   - openjpeg=2.4.0=hb52868f_1
-  - openssl=1.1.1o=h166bdaf_0
+  - openssl=1.1.1o=h7f8727e_0
   - pandas=1.1.5=py36h284efc9_0
   - pango=1.48.10=h54213e6_2
   - paramiko=2.11.0=pyhd8ed1ab_0
@@ -142,6 +142,7 @@ dependencies:
   - six=1.16.0=pyh6c4a22f_0
   - snakemake=3.13.3=py36_0
   - sqlite=3.38.5=h4ff8645_0
+  - subread=2.0.1=h7132678_2
   - sysroot_linux-64=2.12=he073ed8_15
   - tenacity=8.0.1=pyhd8ed1ab_0
   - tk=8.6.12=h27826a3_0
