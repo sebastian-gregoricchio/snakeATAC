@@ -18,7 +18,8 @@ Follow the following steps for the installation:
 * download the GitHub repository `git clone https://github.com/sebastian-gregoricchio/snakeATAC`
 * install the conda environment from the env .yaml file contained in the repository:
 
-```conda env create -f </target/folder>/snakeATAC/workflow/envs/snakeATAC_conda_env_stable.yamll```
+`conda env create -f </target/folder>/snakeATAC/workflow/envs/snakeATAC_conda_env_stable.yamll`
+* activate the environment: `conda activate snakeATAC` (if the env is not activated the pipeline won't work)
 
 
 # Changing names
