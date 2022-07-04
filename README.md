@@ -17,6 +17,7 @@ Follow the following steps for the installation:
 * Place yourself in the directory where the repository should be downloaded with `cd </target/folder>`
 * download the GitHub repository `git clone https://github.com/sebastian-gregoricchio/snakeATAC`
 * install the conda environment from the env .yaml file contained in the repository:
+
 ```conda env create -f </target/folder>/snakeATAC/workflow/envs/snakeATAC_conda_env_stable.yamll```
 
 
