@@ -6,8 +6,18 @@
 [![forks](https://img.shields.io/github/forks/sebastian-gregoricchio/snakeATAC?style=social)](https://github.com/sebastian-gregoricchio/snakeATAC/fork)
 <!---![downloads](https://img.shields.io/github/downloads/sebastian-gregoricchio/Rseb/total.svg)--->
 
-# snakeATAC <img src="https://sebastian-gregoricchio.github.io/snakeATAC/images/snakeATAC_logo.svg" align="right" height = 150/>
-Snakemake pipeline for analysis and normalization of ATAC-seq data starting from fastq.gz files.
+# snakeATAC <img src="https://sebastian-gregoricchio.github.io/snakeATAC/resources/snakeATAC_logo.svg" align="right" height = 150/>
+## Introduction
+`SnakeATAC` is a snakemake based end-to-end pipeline to analyze ATAC-seq data. The input files required to run the pipeline are Paired-End fastq files. The pipeline include data quality check and normalization. It is included also a step of data reads shifting in order to take into account the Tn5 transposome insertion bias.
+
+
+## Installation an dependencies
+To install the pipeline it is required to download this repository and the installation of a conda environment is strongly suggested.
+Follow the following steps for the installation:
+* Place yourself in the directory where the repository should be downloaded with `cd </target/folder>`
+* download the GitHub repository `git clone https://github.com/sebastian-gregoricchio/snakeATAC`
+* install the conda environment from the env .yaml file contained in the repository:
+```conda env create -f </target/folder>/snakeATAC/workflow/envs/snakeATAC_conda_env_stable.yamll```
 
 
 # Changing names
@@ -29,8 +39,7 @@ For any suggestion, bug fixing, commentary please contact Sebastian Gregoricchio
 ## License
 This repository is under a [GNU General Public License (version 3)](https://sebastian-gregoricchio.github.io/Rseb/LICENSE.md/LICENSE).
 
-<br /> 
+<br />
 
 #### Contributors
 [![contributors](https://badges.pufler.dev/contributors/sebastian-gregoricchio/Rseb?size=50&padding=5&bots=true)](https://sebastian-gregoricchio.github.io/)
-
