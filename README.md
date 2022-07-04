@@ -43,8 +43,8 @@ Hereafter, the meaning of the different parameters is described.
 **Experiment-specific section**
 | Parameter   |   Description   |
 |------------:|:----------------|
-|runs_directory| "/home/user/ATAC_test/00_runs/"|
-|output_directory| "/home/user/ATAC_test/" |
+|*runs_directory*| "/home/user/ATAC_test/00_runs/"|
+|*output_directory*| "/home/user/ATAC_test/" |
 |fastq_extension| ".fastq.gz" |
 |runs_suffix| ["_R1", "_R2"]|
 |blacklist_file| "/home/user/annotations/blacklist/hg38-blacklist.v2.bed" # look at https://github.com/Boyle-Lab/Blacklist/ |
