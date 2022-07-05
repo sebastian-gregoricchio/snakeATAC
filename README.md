@@ -51,6 +51,8 @@ The configuration file is a yaml-formatted file containing all the parameters th
 The snakeATAC configuration file is divided in two sections: a) 'experiment-specific', with al the parameters that most likely are changing from experiment to experiment; b) 'common', with parameters that are quite stable independently of the experiments design. The latter should be changed only for very specific needs and is in turn compose by two sections depending on whether the copy number variation is performed or not.
 Hereafter, the meaning of the different parameters is described.
 
+<br></br>
+
 #### Experiment-specific section
 | Parameter   |   Description   |
 |------------:|:----------------|
@@ -170,7 +172,7 @@ done
 
 -----------------
 ## Contact
-For any suggestion, bug fixing, commentary please report it in the [issues](https://github.com/sebastian-gregoricchio/snakeATAC/issues)/(request)[https://github.com/sebastian-gregoricchio/snakeATAC/pulls] tab of this repository.
+For any suggestion, bug fixing, commentary please report it in the [issues](https://github.com/sebastian-gregoricchio/snakeATAC/issues)/[request](https://github.com/sebastian-gregoricchio/snakeATAC/pulls) tab of this repository.
 
 ## License
 This repository is under a [GNU General Public License (version 3)](https://sebastian-gregoricchio.github.io/Rseb/LICENSE.md/LICENSE).
