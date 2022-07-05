@@ -68,7 +68,7 @@ Hereafter, the meaning of the different parameters is described.
 |*call_indels*| If `true`, Insertion/Deletion (indel) calling by [GATK4](https://gatk.broadinstitute.org/hc/en-us) will be performed. **Variant calling is still in beta-test phase.** |
 |*dbsnp_file*| SNP database file (.dbsnp) for base recalibration required by [GATK4](https://gatk.broadinstitute.org/hc/en-us). It could happen that your .bam files contain the 'chr' prefix in the chromosome names while your dbSNP file does not (or viceversa). This can be fixed in the .dbsnp file with the [`bcftools annotate --rename-chrs`](http://samtools.github.io/bcftools/bcftools.html#annotate) command. For Hg38, for istance, the dbSNP file can be downloaded from the [broad institute cloud storage](https://console.cloud.google.com/storage/browser/genomics-public-data/resources/broad/hg38/v0/). Do not forget to download the INDEX as well!|
 
-
+<br></br>
 
 #### Common section
 | Parameter   |   Description   |
@@ -95,13 +95,14 @@ Hereafter, the meaning of the different parameters is described.
 |*heatmap_color*| Default: `"Blues"`. A string indicating the color gradient pattern to use for the correlation heatmaps. This value is passed to matplotlib/seaborn. Therefore, available options (see [matplotlib page](https://matplotlib.org/stable/tutorials/colors/colormaps.html) for examples) are the following: 'Accent', 'Blues', 'BrBG', 'BuGn', 'BuPu', 'CMRmap', 'Dark2', 'GnBu', 'Greens', 'Greys', 'OrRd', 'Oranges', 'PRGn', 'Paired', 'Pastel1', 'Pastel2', 'PiYG', 'PuBu', 'PuBuGn', 'PuOr', 'PuRd', 'Purples', 'RdBu', 'RdGy', 'RdPu', 'RdYlBu', 'RdYlGn', 'Reds', 'Set1', 'Set2', 'Set3', 'Spectral', 'Wistia', 'YlGn', 'YlGnBu', 'YlOrBr', 'YlOrRd', 'afmhot', 'autumn', 'binary', 'bone', 'brg', 'bwr', 'cividis', 'cool', 'coolwarm', 'copper', 'cubehelix', 'flag', 'gist_earth', 'gist_gray', 'gist_heat', 'gist_ncar', 'gist_rainbow', 'gist_stern', 'gist_yarg', 'gnuplot', 'gnuplot2', 'gray', 'hot', 'hsv', 'icefire', 'inferno', 'jet', 'magma', 'mako', 'nipy_spectral', 'ocean', 'pink', 'plasma', 'prism', 'rainbow', 'rocket', 'seismic', 'spring', 'summer', 'tab10', 'tab20', 'tab20b', 'tab20c', 'terrain', 'twilight', 'twilight_shifted', 'viridis', 'vlag', 'winter'. |
 |*zScore_heatmap_color*| Default: `"seismic"`. A string indicating the color gradient pattern to use for the peak score heatmaps. This value is passed to matplotlib/seaborn. Therefore, available options (see [matplotlib page](https://matplotlib.org/stable/tutorials/colors/colormaps.html) for examples) are the following: 'Accent', 'Blues', 'BrBG', 'BuGn', 'BuPu', 'CMRmap', 'Dark2', 'GnBu', 'Greens', 'Greys', 'OrRd', 'Oranges', 'PRGn', 'Paired', 'Pastel1', 'Pastel2', 'PiYG', 'PuBu', 'PuBuGn', 'PuOr', 'PuRd', 'Purples', 'RdBu', 'RdGy', 'RdPu', 'RdYlBu', 'RdYlGn', 'Reds', 'Set1', 'Set2', 'Set3', 'Spectral', 'Wistia', 'YlGn', 'YlGnBu', 'YlOrBr', 'YlOrRd', 'afmhot', 'autumn', 'binary', 'bone', 'brg', 'bwr', 'cividis', 'cool', 'coolwarm', 'copper', 'cubehelix', 'flag', 'gist_earth', 'gist_gray', 'gist_heat', 'gist_ncar', 'gist_rainbow', 'gist_stern', 'gist_yarg', 'gnuplot', 'gnuplot2', 'gray', 'hot', 'hsv', 'icefire', 'inferno', 'jet', 'magma', 'mako', 'nipy_spectral', 'ocean', 'pink', 'plasma', 'prism', 'rainbow', 'rocket', 'seismic', 'spring', 'summer', 'tab10', 'tab20', 'tab20b', 'tab20c', 'terrain', 'twilight', 'twilight_shifted', 'viridis', 'vlag', 'winter'. |
 
+<br></br>
 
 *Copy Number Variation signal correction* (for details see the [HMCan page](https://bitbucket.org/pyminer/hmcan/src/master/))
 | Parameter   |   Description   |
 |------------:|:----------------|
 |*HMCan_path*| Full path to the folder containing the HMCan scripts. Instruction for the download and build of HMCan can be found at the the [HMCan page](https://bitbucket.org/pyminer/hmcan/src/master/). |
-|*HMCan_threads*|: Default: `12`. Number of CPUs to be used by [HMCan](https://bitbucket.org/pyminer/hmcan/src/master/). |
-|*chromosome_sizes_file*|: Full path to the chromosome sizes file used to convert the CNV corrected signal into a bigWig. These files can be downloaded from the [UCSC golden path](https://hgdownload.soe.ucsc.edu/goldenPath/). |
+|*HMCan_threads*| Default: `12`. Number of CPUs to be used by [HMCan](https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*chromosome_sizes_file*| Full path to the chromosome sizes file used to convert the CNV corrected signal into a bigWig. These files can be downloaded from the [UCSC golden path](https://hgdownload.soe.ucsc.edu/goldenPath/). |
 |*reference_sample*| Default: `"NA"`. A string to define the reference sample (sample ID) to which all the samples should be normalized. `"NA"` indicates that the first samples in alphabetic order will be used as reference. |
 |*format*| Default: `"BAM"` (used to build an HMCan configFile).
 |*GCIndex*| (used to build an HMCan configFile) Full path to the GC index file provided at the [HMCan page](https://bitbucket.org/pyminer/hmcan/src/master/). Example: "/home/user/HMCan-master/data/GC_profile_25KbWindow_Mapp100bp_hg38.cnp". |
@@ -121,10 +122,9 @@ Hereafter, the meaning of the different parameters is described.
 |*GCmergeDistance*| Default: `1000` (used to build an HMCan configFile). For details see the [HMCan page](https://bitbucket.org/pyminer/hmcan/src/master/). |
 |*RemoveDuplicates*| Default: `"False"` (used to build an HMCan configFile). For details see the [HMCan page](https://bitbucket.org/pyminer/hmcan/src/master/). |
 |*CNAnormalization*| Default: `"True"` (used to build an HMCan configFile). For details see the [HMCan page](https://bitbucket.org/pyminer/hmcan/src/master/). |
-
 |*multiBamSummary_threads*| Default: `6`. Number of CPUs to be used by [deeptools multiBamSummary](https://deeptools.readthedocs.io/en/develop/content/tools/multiBamSummary.html) in order to compute an average signal over all the genome for each sample for the calculation of the scaling factors. This factors will be used to normalize the CNV corrected signal by sequencing depth.|
 
-
+<br></br>
 
 *Standard normalization and peak calling (without CNV correction)*
 | Parameter   |   Description   |
