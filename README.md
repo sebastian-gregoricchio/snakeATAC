@@ -48,10 +48,10 @@ Explain the rules  + workflow
 
 ### Configuration file
 The configuration file is a yaml-formatted file containing all the parameters that are passed to different steps of the pipelines such as the directory with the input files, reference genome, threads of the tools, etc.
-The snakeATAC configuration file is divided in two sections: a) 'experiment-specific', with al the parameters that most likely are changing from experiment to experiment; b) 'constant', with parameters that are quite stable independently of the experiments design. The latter should be changed only for very specific needs.
+The snakeATAC configuration file is divided in two sections: a) 'experiment-specific', with al the parameters that most likely are changing from experiment to experiment; b) 'common', with parameters that are quite stable independently of the experiments design. The latter should be changed only for very specific needs and is in turn compose by two sections depending on whether the copy number variation is performed or not.
 Hereafter, the meaning of the different parameters is described.
 
-**Experiment-specific section**
+#### Experiment-specific section
 | Parameter   |   Description   |
 |------------:|:----------------|
 |*runs_directory*| The full path to the directory were the input fastq files are contained, e.g. `/home/user/ATAC/00_runs/`. Importantly, the name of the files, deprived of the read suffix (e.g., _R1/_R2) and file extension (e.g., .fastq.gz) will be used as sample name.|
@@ -66,14 +66,86 @@ Hereafter, the meaning of the different parameters is described.
 |*call_variants*| If `true`, variant calling by [GATK4](https://gatk.broadinstitute.org/hc/en-us) will be performed. **Variant calling is still in beta-test phase.** |
 |*call_SNPs*| If `true`, Single Nucleotide Variation (SNP) calling by [GATK4](https://gatk.broadinstitute.org/hc/en-us) will be performed. **Variant calling is still in beta-test phase.** |
 |*call_indels*| If `true`, Insertion/Deletion (indel) calling by [GATK4](https://gatk.broadinstitute.org/hc/en-us) will be performed. **Variant calling is still in beta-test phase.** |
-|*dbsnp_file*| SNP database file (.dbsnp) for base recalibration required by [GATK4](https://gatk.broadinstitute.org/hc/en-us). It could happen that your .bam files contain the 'chr' prefix in the chromosome names while your dbsnp file does not (or viceversa). This can be fixed in the .dbsnp file with the [`bcftools annotate --rename-chrs`](http://samtools.github.io/bcftools/bcftools.html#annotate) command. For Hg38, for istance, the dbSNP file can be downloaded from the [broad institute cloud storage](https://console.cloud.google.com/storage/browser/genomics-public-data/resources/broad/hg38/v0/). Do not forget to download the INDEX as well!|
+|*dbsnp_file*| SNP database file (.dbsnp) for base recalibration required by [GATK4](https://gatk.broadinstitute.org/hc/en-us). It could happen that your .bam files contain the 'chr' prefix in the chromosome names while your dbSNP file does not (or viceversa). This can be fixed in the .dbsnp file with the [`bcftools annotate --rename-chrs`](http://samtools.github.io/bcftools/bcftools.html#annotate) command. For Hg38, for istance, the dbSNP file can be downloaded from the [broad institute cloud storage](https://console.cloud.google.com/storage/browser/genomics-public-data/resources/broad/hg38/v0/). Do not forget to download the INDEX as well!|
+
+
+
+#### Common section
+| Parameter   |   Description   |
+|------------:|:----------------|
+|*fastQC_threads*| Default: `2`. Number of CPUs to use for [fastQC](https://github.com/s-andrews/FastQC) (fastq quality control) |
+|*bwa_threads*| Default: `8`. Number of CPUs to use for the mapping performed by [bwa-mem](http://bio-bwa.sourceforge.net/bwa.shtml). |
+|*mapQ_cutoff*| Default: `20`. All reads with a mapping quality (MAPQ) score lower than this value will be filtered out from the bam files. |
+|*SAMtools_threads*| Default: `8`. Number of CPUs used by [samtools](http://www.htslib.org/doc/samtools.html) for bam indexing and filtering. |
+|*remove_duplicates*| Default: `"true"`. Logical value to indicate whether the optical duplicates should be removed from the bams by [PICARD](https://broadinstitute.github.io/picard/). If set as `"true"` the suffix of output bam files will be '*_dedup*' and the duplicates will be removed, otherwise the suffix will be '*_mdup*' and the duplicates only marked when set to `"false"`.
+|*PICARD_max_records_in_ram*| Default: `250000` This will specify the number of records stored in RAM before spilling to disk. The higher the number the higher the amount of RAM needed. |
+|*PICARD_max_file_handles_for_read_ends_map*| Default: `4000` Maximum number of file handles to keep open when spilling read ends to disk. This number should be slightly lower than the per-process maximum number of file that may be open in your system (`ulimit -n`). |
+|*minFragmentLength*| Default: `0`. Minimum fragment length needed for pair inclusion during Tn5 tagmentation bias correction by [deeptools alignmentSieve](https://deeptools.readthedocs.io/en/develop/content/tools/alignmentSieve.html) tool. |
+|*maxFragmentLength*| Default: `0`. Maximum fragment length needed for pair inclusion during Tn5 tagmentation bias correction by [deeptools alignmentSieve](https://deeptools.readthedocs.io/en/develop/content/tools/alignmentSieve.html) tool. A value of 0 indicates no limit. |
+|*plot_format*| Default: `"pdf"`. File format of the images of the fragment size distribution generated by [deeptools bamPEFragmentSize](https://deeptools.readthedocs.io/en/develop/content/tools/bamPEFragmentSize.html). |
+|*bamPEFragmentSize_threads*| Default: `0`. Number of CPUs [deeptools bamPEFragmentSize](https://deeptools.readthedocs.io/en/develop/content/tools/bamPEFragmentSize.html) should use to compute the fragment size distribution. |
+|*max_fragment_length*| Default: `2000`. Maximum fragment size length to be plotted by [deeptools bamPEFragmentSize](https://deeptools.readthedocs.io/en/develop/content/tools/bamPEFragmentSize.html). A value of 0 indicates to use twice the mean fragment length. |
+|*window_length*| Default: `1000`. Size, in bp, of the sliding window used to compute the fragment size distribution by [deeptools bamPEFragmentSize](https://deeptools.readthedocs.io/en/develop/content/tools/bamPEFragmentSize.html). |
+|*plotFingerprint_threads*| Default: `8`. Number of CPUs to be used by [deeptools plotFingerprint](https://deeptools.readthedocs.io/en/develop/content/tools/plotFingerprint.html) to compute the Lorenz curves. |
+|*plotFingerprint_binSize*| Default: `500`. Size of the bins, in bp, by which the genome should be subdivided in order to compute the Lorenz curves by [deeptools plotFingerprint](https://deeptools.readthedocs.io/en/develop/content/tools/plotFingerprint.html). |
+|*plotFingerprint_sampledRegions*| Default: `500000`. Number of regions to be samples in order to compute the Lorenz curves by [deeptools plotFingerprint](https://deeptools.readthedocs.io/en/develop/content/tools/plotFingerprint.html). |
+|*plotFingerprint_extra_parameters*| Default: `""` (empty). A string with any additional parameter to add for the Lorenz curve computation performed by [deeptools plotFingerprint](https://deeptools.readthedocs.io/en/develop/content/tools/plotFingerprint.html). |
+|*binning_window_size*| Default: `10000`. Size of the bins, in bp, by which the genome should be subdivided in order to compute the average score matrix by [deeptools multiBigwigSummary](https://deeptools.readthedocs.io/en/develop/content/tools/multiBigwigSummary.html). This matrix is used to compute sample correlation and Principal Component Analyses (PCA). |
+|*multiBigwigSummary_threads*| Default: `4`. Number of CPUs to be used by [deeptools multiBigwigSummary](https://deeptools.readthedocs.io/en/develop/content/tools/multiBigwigSummary.html) in order to compute an average signal over all the genome for each sample. The resulting matrix is used to compute sample correlation and Principal Component Analyses (PCA). |
+|*heatmap_color*| Default: `"Blues"`. A string indicating the color gradient pattern to use for the correlation heatmaps. This value is passed to matplotlib/seaborn. Therefore, available options (see [matplotlib page](https://matplotlib.org/stable/tutorials/colors/colormaps.html) for examples) are the following: 'Accent', 'Blues', 'BrBG', 'BuGn', 'BuPu', 'CMRmap', 'Dark2', 'GnBu', 'Greens', 'Greys', 'OrRd', 'Oranges', 'PRGn', 'Paired', 'Pastel1', 'Pastel2', 'PiYG', 'PuBu', 'PuBuGn', 'PuOr', 'PuRd', 'Purples', 'RdBu', 'RdGy', 'RdPu', 'RdYlBu', 'RdYlGn', 'Reds', 'Set1', 'Set2', 'Set3', 'Spectral', 'Wistia', 'YlGn', 'YlGnBu', 'YlOrBr', 'YlOrRd', 'afmhot', 'autumn', 'binary', 'bone', 'brg', 'bwr', 'cividis', 'cool', 'coolwarm', 'copper', 'cubehelix', 'flag', 'gist_earth', 'gist_gray', 'gist_heat', 'gist_ncar', 'gist_rainbow', 'gist_stern', 'gist_yarg', 'gnuplot', 'gnuplot2', 'gray', 'hot', 'hsv', 'icefire', 'inferno', 'jet', 'magma', 'mako', 'nipy_spectral', 'ocean', 'pink', 'plasma', 'prism', 'rainbow', 'rocket', 'seismic', 'spring', 'summer', 'tab10', 'tab20', 'tab20b', 'tab20c', 'terrain', 'twilight', 'twilight_shifted', 'viridis', 'vlag', 'winter'. |
+|*zScore_heatmap_color*| Default: `"seismic"`. A string indicating the color gradient pattern to use for the peak score heatmaps. This value is passed to matplotlib/seaborn. Therefore, available options (see [matplotlib page](https://matplotlib.org/stable/tutorials/colors/colormaps.html) for examples) are the following: 'Accent', 'Blues', 'BrBG', 'BuGn', 'BuPu', 'CMRmap', 'Dark2', 'GnBu', 'Greens', 'Greys', 'OrRd', 'Oranges', 'PRGn', 'Paired', 'Pastel1', 'Pastel2', 'PiYG', 'PuBu', 'PuBuGn', 'PuOr', 'PuRd', 'Purples', 'RdBu', 'RdGy', 'RdPu', 'RdYlBu', 'RdYlGn', 'Reds', 'Set1', 'Set2', 'Set3', 'Spectral', 'Wistia', 'YlGn', 'YlGnBu', 'YlOrBr', 'YlOrRd', 'afmhot', 'autumn', 'binary', 'bone', 'brg', 'bwr', 'cividis', 'cool', 'coolwarm', 'copper', 'cubehelix', 'flag', 'gist_earth', 'gist_gray', 'gist_heat', 'gist_ncar', 'gist_rainbow', 'gist_stern', 'gist_yarg', 'gnuplot', 'gnuplot2', 'gray', 'hot', 'hsv', 'icefire', 'inferno', 'jet', 'magma', 'mako', 'nipy_spectral', 'ocean', 'pink', 'plasma', 'prism', 'rainbow', 'rocket', 'seismic', 'spring', 'summer', 'tab10', 'tab20', 'tab20b', 'tab20c', 'terrain', 'twilight', 'twilight_shifted', 'viridis', 'vlag', 'winter'. |
+
+
+*Copy Number Variation signal correction* (for details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/))
+| Parameter   |   Description   |
+|------------:|:----------------|
+|*HMCan_path*| Full path to the folder containing the HMCan scripts. Instruction for the download and build of HMCan can be found at the the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*HMCan_threads*|: Default: `12`. Number of CPUs to be used by [HMCan](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*chromosome_sizes_file*|: Full path to the chromosome sizes file used to convert the CNV corrected signal into a bigWig. These files can be downloaded from the [UCSC golden path](https://hgdownload.soe.ucsc.edu/goldenPath/). |
+|*reference_sample*| Default: `"NA"`. A string to define the reference sample (sample ID) to which all the samples should be normalized. `"NA"` indicates that the first samples in alphabetic order will be used as reference. |
+|*format*| Default: `"BAM"` (used to build an HMCan configFile).
+|*GCIndex*| (used to build an HMCan configFile) Full path to the GC index file provided at the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). Example: "/home/user/HMCan-master/data/GC_profile_25KbWindow_Mapp100bp_hg38.cnp". |
+|*smallBinLength*| Default: `5` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*largeBinLength*| Default: `25000` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*pvalueThreshold| Default: `0.001` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*mergeDistance*| Default: `0` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*iterationThreshold*| Default: `5` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*finalThreshold*| Default: `0` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*maxIter*| Default: `20` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*PrintWig*| Default: `"False"` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*PrintPosterior*| Default: `"True"` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*PrintBedGraph*| Default: `"True"` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*CallPeaks*| Default: `"True"` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*pairedEnds*| Default: `"True"` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*Type*| Default: `"ATAC-seq"` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*GCmergeDistance*| Default: `1000` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*RemoveDuplicates*| Default: `"False"` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+|*CNAnormalization*| Default: `"True"` (used to build an HMCan configFile). For details see the [HMCan page](see https://bitbucket.org/pyminer/hmcan/src/master/). |
+
+|*multiBamSummary_threads*| Default: `6`. Number of CPUs to be used by [deeptools multiBamSummary](https://deeptools.readthedocs.io/en/develop/content/tools/multiBamSummary.html) in order to compute an average signal over all the genome for each sample for the calculation of the scaling factors. This factors will be used to normalize the CNV corrected signal by sequencing depth.|
+
+
+
+*Standard normalization and peak calling (without CNV correction)*
+| Parameter   |   Description   |
+|------------:|:----------------|
+|*bigWig_binSize*| Default: `5`. Size, in bp, of the bins used to compute the normalized bigWig files. |
+|*normalization_method*| Default: `"RPGC"`, reads per genomic content (1x normalization). Type of normalization to be used to generated the normalized bigWig files by [deeptools bamCoverage](https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html). |
+|*bamCoverage_threads*| Default: `8`. Number of CPUs to be used by [deeptools bamCoverage](https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html) in order to compute the signal normalization and the bigWig generation. |
+|*genome_size_MACS*| A string or a number indicating the genome size to use by [MACS3](https://github.com/macs3-project/MACS) for the peak calling. Example: `"hs"`. Some values: hs = 2.7e9, mm = 1.87e9, ce = 9e7, dm = 1.2e8. |
+|*FDR_cutoff*| Deafult: `0.01`. False Discovery Ratio (FDR) cutoff used by [MACS3](https://github.com/macs3-project/MACS) to filter the significant peaks. |
+|*call_summits*| Default: `"True"`. Logical value to define whether [MACS3](https://github.com/macs3-project/MACS) should also call the peak summits (position with the highest value). |
+|*FRiP_threshold*| Default `20`. This value will be used to label the FRiP (Fraction of Reads in a Peak) score as "good" or "bad in the summary table for each single sample. A FRiP above the 20% (FRiP = 0.02) is considered a good score for ATAC-seq peaks by the [ENCODE guidelines](https://www.encodeproject.org/atac-seq/). |
+
 
 
 <br></br>
 
 
 ## Results
-The snakemake pipeline r
+Results interpretation and structure output
+
+summmary file
 
 
 
