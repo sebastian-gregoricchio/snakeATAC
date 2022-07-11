@@ -8,7 +8,7 @@
 
 # snakeATAC <img src="https://sebastian-gregoricchio.github.io/snakeATAC/resources/snakeATAC_logo.svg" align="right" height = 150/>
 ## Introduction
-`SnakeATAC` is a snakemake based end-to-end pipeline to analyze ATAC-seq data. The input files required to run the pipeline are Paired-End fastq files. The pipeline include data quality check and normalization. It is included also a step of data reads shifting in order to take into account the Tn5 transposome insertion bias.
+`SnakeATAC` is a snakemake based end-to-end pipeline to analyze ATAC-seq data. The input files required to run the pipeline are Paired-End fastq files. The pipeline include data quality check and normalization. It is included also a step of data reads shifting in order to take into account the Tn5 transposome insertion bias. Indeed, reads should be shifted + 4 bp and − 5 bp for positive and negative strand respectively, to account for the 9-bp duplication created by DNA repair of the nick by Tn5 transposase and achieve base-pair resolution of TF footprint and motif-related analyses [Yan F., *et al.*, Genome Biol. 2020](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-020-1929-3).
 
 ### Citation
 If you use this package, please cite:
@@ -159,14 +159,14 @@ Hereafter, the meaning of the different parameters is described.
 
 
 ## Results
-The structure of the output folder is the following:
+The structure of the *output_folder* is the following:
 
 <pre>
 <b><em>output_folder</em></b>
 ├── <b>01_fastQC_raw</b>
 │   ├── <em>sample</em>_fastqc.html
 │   ├── <em>sample</em>_fastqc.zip
-│   └── multiQC_raw</b>
+│   └── <b>multiQC_raw</b>
 │       ├── <b>multiQC_report_fastqRaw_data</b>
 │       │   ├── multiqc_citations.txt
 │       │   ├── multiqc_data.json
@@ -183,7 +183,7 @@ The structure of the output folder is the following:
 │       ├── <em>sample</em>_flagstat_filtered_bam_woMT.txt
 │       └── <em>sample</em>_flagstat_UNfiltered_bam.txt
 |
-├── <b>03_BAM_dedup</b>
+├── <b>03_BAM_dedup</b> (or 03_BAM_mdup, if duplicates are not removed)
 │   ├── <em>sample</em>_mapQ20_woMT_dedup_shifted_sorted.bam
 │   ├── <em>sample</em>_mapQ20_woMT_dedup_shifted_sorted.bam.bai
 │   ├── <b>fastQC</b>
@@ -226,7 +226,7 @@ The structure of the output folder is the following:
     ├── <b>Counts</b>
     │   ├── counts_summary.txt
     │   └── <b>subread_featureCounts_output</b>
-    │       └── <em>sample</em>
+    │       └── <b>sample</b>
     │           ├── <em>sample</em>.readCountInPeaks
     │           ├── <em>sample</em>.readCountInPeaks.log
     │           └── <em>sample</em>.readCountInPeaks.summary
@@ -245,6 +245,18 @@ The structure of the output folder is the following:
             └── Correlation_scatterplot_on_BigWigs_wholeGenome_spearmanMethod.pdf
 </pre>
 
+
+
+
+### 01_fastQC_raw
+This folder contains a the fastq quality control (fastQC) reports for each fastq file and a summary report of multiQC.
+
+
+### 02_BAM
+When the reads are aligned onto the reference genome by bwa, the resulting SAM files are filtered for mapping quality (MAPQ) and the mithocondrial (suffix: woMT) reads are removed before sorting.
+
+### 03_BAM_dedup / 03_BAM_mdup
+PICARD is used to remove (suffix: dedup) or mark (suffix: mdup) duplicates in the BAM files. The resulting BAMs are stored in the subfolder "unshifted_bams". Then, the transposome insertion bias introduced by the Tn5 is corrected by [deeptools alignmentSieve](https://deeptools.readthedocs.io/en/develop/content/tools/alignmentSieve.html) (suffix: shifted).
 
 
 
