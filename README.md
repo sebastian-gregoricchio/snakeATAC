@@ -1,10 +1,10 @@
 [![Snakemake](https://img.shields.io/badge/snakemake-≥6.3.0-brightgreen.svg)](https://snakemake.github.io)
 ![release](https://img.shields.io/github/v/release/sebastian-gregoricchio/snakeATAC)
-<!-- ![update](https://badges.pufler.dev/updated/sebastian-gregoricchio/snakeATAC)
-![visits](https://badges.pufler.dev/visits/sebastian-gregoricchio/snakeATAC) -->
 [![license](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://sebastian-gregoricchio.github.io/snakeATAC/LICENSE.md/LICENSE)
 [![forks](https://img.shields.io/github/forks/sebastian-gregoricchio/snakeATAC?style=social)](https://github.com/sebastian-gregoricchio/snakeATAC/fork)
-<!---![downloads](https://img.shields.io/github/downloads/sebastian-gregoricchio/Rseb/total.svg)--->
+<!-- ![update](https://badges.pufler.dev/updated/sebastian-gregoricchio/snakeATAC)
+![visits](https://badges.pufler.dev/visits/sebastian-gregoricchio/snakeATAC)
+![downloads](https://img.shields.io/github/downloads/sebastian-gregoricchio/Rseb/total.svg)--->
 
 # snakeATAC <img src="https://sebastian-gregoricchio.github.io/snakeATAC/resources/snakeATAC_logo.svg" align="right" height = 150/>
 ## Introduction
@@ -162,12 +162,12 @@ Hereafter, the meaning of the different parameters is described.
 The structure of the output folder is the following:
 
 <pre>
-output_folder
-├── 01_fastQC_raw
-│   ├── <b>sample</b>_fastqc.html
-│   ├── <b>sample</b>_fastqc.zip
-│   └── multiQC_raw
-│       ├── multiQC_report_fastqRaw_data
+<b><em>output_folder</em></b>
+├── <b>01_fastQC_raw</b>
+│   ├── <em>sample</em>_fastqc.html
+│   ├── <em>sample</em>_fastqc.zip
+│   └── multiQC_raw</b>
+│       ├── <b>multiQC_report_fastqRaw_data</b>
 │       │   ├── multiqc_citations.txt
 │       │   ├── multiqc_data.json
 │       │   ├── multiqc_fastqc.txt
@@ -176,21 +176,21 @@ output_folder
 │       │   └── multiqc_sources.txt
 │       └── multiQC_report_fastqRaw.html
 |
-├── 02_BAM
-│   ├── <b>sample</b>_mapQ20_sorted_woMT.bam
-│   ├── <b>sample</b>_mapQ20_sorted_woMT.bam.bai
-│   └── flagstat
-│       ├── <b>sample</b>_flagstat_filtered_bam_woMT.txt
-│       └── <b>sample</b>_flagstat_UNfiltered_bam.txt
+├── <b>02_BAM</b>
+│   ├── <em>sample</em>_mapQ20_sorted_woMT.bam
+│   ├── <em>sample</em>_mapQ20_sorted_woMT.bam.bai
+│   └── <b>flagstat</b>
+│       ├── <em>sample</em>_flagstat_filtered_bam_woMT.txt
+│       └── <em>sample</em>_flagstat_UNfiltered_bam.txt
 |
-├── 03_BAM_dedup
-│   ├── <b>sample</b>_mapQ20_woMT_dedup_shifted_sorted.bam
-│   ├── <b>sample</b>_mapQ20_woMT_dedup_shifted_sorted.bam.bai
-│   ├── fastQC
-│   │   ├── <b>sample</b>_sorted_woMT_dedup_fastqc.html
-│   │   ├── <b>sample</b>_sorted_woMT_dedup_fastqc.zip
-│   │   └── multiQC_dedup_bams
-│   │       ├── multiQC_report_BAMs_dedup_data
+├── <b>03_BAM_dedup</b>
+│   ├── <em>sample</em>_mapQ20_woMT_dedup_shifted_sorted.bam
+│   ├── <em>sample</em>_mapQ20_woMT_dedup_shifted_sorted.bam.bai
+│   ├── <b>fastQC</b>
+│   │   ├── <em>sample</em>_sorted_woMT_dedup_fastqc.html
+│   │   ├── <em>sample</em>_sorted_woMT_dedup_fastqc.zip
+│   │   └── <b>multiQC_dedup_bams</b>
+│   │       ├── <b>multiQC_report_BAMs_dedup_data</b>
 │   │       │   ├── multiqc_citations.txt
 │   │       │   ├── multiqc_data.json
 │   │       │   ├── multiqc_fastqc.txt
@@ -198,49 +198,49 @@ output_folder
 │   │       │   ├── multiqc.log
 │   │       │   └── multiqc_sources.txt
 │   │       └── multiQC_report_BAMs_dedup.html
-│   ├── flagstat
-│   │   ├── <b>sample</b>_flagstat_filtered_bam_woMT_dedup.txt
-│   │   └── <b>sample</b>_flagstat_woMT_dedup_shifted_sorted.txt
-│   ├── fragmentSizeDistribution_plots
-│   │   └── <b>sample</b>_fragment_size_distribution.pdf
-│   ├── metrics
-│   │   └── <b>sample</b>_metrics_woMT_dedup_bam.txt
-│   └── unshifted_bams
-│       ├── <b>sample</b>_mapQ20_sorted_woMT_dedup.bam
-│       └── <b>sample</b>_mapQ20_sorted_woMT_dedup.bai
+│   ├── <b>flagstat</b>
+│   │   ├── <em>sample</em>_flagstat_filtered_bam_woMT_dedup.txt
+│   │   └── <em>sample</em>_flagstat_woMT_dedup_shifted_sorted.txt
+│   ├── <b>fragmentSizeDistribution_plots</b>
+│   │   └── <em>sample</em>_fragment_size_distribution.pdf
+│   ├── <b>metrics</b>
+│   │   └── <em>sample</em>_metrics_woMT_dedup_bam.txt
+│   └── <b>unshifted_bams</b>
+│       ├── <em>sample</em>_mapQ20_sorted_woMT_dedup.bam
+│       └── <em>sample</em>_mapQ20_sorted_woMT_dedup.bai
 |
-├── 04_Normalization
-│   ├── HMCan_output ### --> only if HMCan correction is performed ###
-│   └── normalized_bigWigs
-│       └── <b>sample</b>_mapQ20_woMT_dedup_shifted_normalized_bs5.bw
+├── <b>04_Normalization</b>
+│   ├── <b>HMCan_output</b> ### --> only if HMCan correction is performed ###
+│   └── <b>normalized_bigWigs</b>
+│       └── <em>sample</em>_mapQ20_woMT_dedup_shifted_normalized_bs5.bw
 │
-├── 05_Peaks_MACS3
-│   ├── <b>sample</b>_mapQ20_woMT_dedup_shifted_FDR0.01_peaks.narrowPeak
-│   ├── <b>sample</b>_mapQ20_woMT_dedup_shifted_FDR0.01_peaks.xls
-│   ├── <b>sample</b>_mapQ20_woMT_dedup_shifted_FDR0.01_summits.bed
-│   └── log
-│       └── <b>sample</b>_mapQ20_woMT_dedup_shifted_FDR0.01.log
+├── <b>05_Peaks_MACS3</b>
+│   ├── <em>sample</em>_mapQ20_woMT_dedup_shifted_FDR0.01_peaks.narrowPeak
+│   ├── <em>sample</em>_mapQ20_woMT_dedup_shifted_FDR0.01_peaks.xls
+│   ├── <em>sample</em>_mapQ20_woMT_dedup_shifted_FDR0.01_summits.bed
+│   └── <b>log</b>
+│       └── <em>sample</em>_mapQ20_woMT_dedup_shifted_FDR0.01.log
 |
-└── 06_Overall_quality_and_info
-    ├── Counts
+└── <b>06_Overall_quality_and_info</b>
+    ├── <b>Counts</b>
     │   ├── counts_summary.txt
-    │   └── subread_featureCounts_output
-    │       └── <b>sample</b>
-    │           ├── <b>sample</b>.readCountInPeaks
-    │           ├── <b>sample</b>.readCountInPeaks.log
-    │           └── <b>sample</b>.readCountInPeaks.summary
+    │   └── <b>subread_featureCounts_output</b>
+    │       └── <em>sample</em>
+    │           ├── <em>sample</em>.readCountInPeaks
+    │           ├── <em>sample</em>.readCountInPeaks.log
+    │           └── <em>sample</em>.readCountInPeaks.summary
     ├── Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf
-    └── Sample_comparisons
+    └── <b>Sample_comparisons</b>
         ├── multiBigWigSummary_matrix_allSamples.npz
         ├── PCA_on_BigWigs_wholeGenome.pdf
-        ├── Peak_comparison
+        ├── <b>Peak_comparison</b>
         │   ├── all_samples_peaks_concatenation_collapsed_sorted.bed
-        │   ├── Heatmaps
+        │   ├── <b>Heatmaps</b>
         │   │   ├── Heatmap_on_log1p.rawScores_for_MACS3.peaks_union_population.pdf
         │   │   └── Heatmap_on_zScores_for_MACS3.peaks_union_population.pdf
         │   ├── peaks_score_matrix_all_samples_MACS3.npz
         │   └── peaks_score_matrix_all_samples_table_MACS3.tsv
-        └── Sample_correlation
+        └── <b>Sample_correlation</b>
             ├── Correlation_heatmap_on_BigWigs_wholeGenome_pearsonMethod.pdf
             ├── Correlation_heatmap_on_BigWigs_wholeGenome_spearmanMethod.pdf
             ├── Correlation_scatterplot_on_BigWigs_wholeGenome_pearsonMethod.pdf
