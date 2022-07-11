@@ -222,6 +222,7 @@ The structure of the output folder is the following:
 │       └── <em>sample</em>_mapQ20_woMT_dedup_shifted_FDR0.01.log
 |
 └── <b>06_Overall_quality_and_info</b>
+    ├── Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf
     ├── <b>Counts</b>
     │   ├── counts_summary.txt
     │   └── <b>subread_featureCounts_output</b>
@@ -235,9 +236,6 @@ The structure of the output folder is the following:
         ├── PCA_on_BigWigs_wholeGenome.pdf
         ├── <b>Peak_comparison</b>
         │   ├── all_samples_peaks_concatenation_collapsed_sorted.bed
-        │   ├── <b>Heatmaps</b>
-        │   │   ├── Heatmap_on_log1p.rawScores_for_MACS3.peaks_union_population.pdf
-        │   │   └── Heatmap_on_zScores_for_MACS3.peaks_union_population.pdf
         │   ├── peaks_score_matrix_all_samples_MACS3.npz
         │   └── peaks_score_matrix_all_samples_table_MACS3.tsv
         └── <b>Sample_correlation</b>
