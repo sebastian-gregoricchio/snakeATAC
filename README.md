@@ -162,8 +162,8 @@ Hereafter, the meaning of the different parameters is described.
 The structure of the output folder is the following:
 
 <pre>
-<b><em>output_folder</em></b>
-├── <b>01_fastQC_raw</b>
+<p style="color:#00A83E";><b><em>output_folder</em></b></p>
+├── <p style="color:#F0E5A34";><b>01_fastQC_raw</b></p>
 │   ├── <em>sample</em>_fastqc.html
 │   ├── <em>sample</em>_fastqc.zip
 │   └── multiQC_raw</b>
@@ -176,14 +176,14 @@ The structure of the output folder is the following:
 │       │   └── multiqc_sources.txt
 │       └── multiQC_report_fastqRaw.html
 |
-├── <b>02_BAM</b>
+├── <p style="color:#F0E5A34";><b>02_BAM</b></p>
 │   ├── <em>sample</em>_mapQ20_sorted_woMT.bam
 │   ├── <em>sample</em>_mapQ20_sorted_woMT.bam.bai
 │   └── <b>flagstat</b>
 │       ├── <em>sample</em>_flagstat_filtered_bam_woMT.txt
 │       └── <em>sample</em>_flagstat_UNfiltered_bam.txt
 |
-├── <b>03_BAM_dedup</b>
+├── <p style="color:#F0E5A34";><b>03_BAM_dedup</b></p>
 │   ├── <em>sample</em>_mapQ20_woMT_dedup_shifted_sorted.bam
 │   ├── <em>sample</em>_mapQ20_woMT_dedup_shifted_sorted.bam.bai
 │   ├── <b>fastQC</b>
@@ -209,19 +209,19 @@ The structure of the output folder is the following:
 │       ├── <em>sample</em>_mapQ20_sorted_woMT_dedup.bam
 │       └── <em>sample</em>_mapQ20_sorted_woMT_dedup.bai
 |
-├── <b>04_Normalization</b>
+├── <p style="color:#F0E5A34";><b>04_Normalization</b></p>
 │   ├── <b>HMCan_output</b> ### --> only if HMCan correction is performed ###
 │   └── <b>normalized_bigWigs</b>
 │       └── <em>sample</em>_mapQ20_woMT_dedup_shifted_normalized_bs5.bw
 │
-├── <b>05_Peaks_MACS3</b>
+├── <p style="color:#F0E5A34";><b>05_Peaks_MACS3</b></p>
 │   ├── <em>sample</em>_mapQ20_woMT_dedup_shifted_FDR0.01_peaks.narrowPeak
 │   ├── <em>sample</em>_mapQ20_woMT_dedup_shifted_FDR0.01_peaks.xls
 │   ├── <em>sample</em>_mapQ20_woMT_dedup_shifted_FDR0.01_summits.bed
 │   └── <b>log</b>
 │       └── <em>sample</em>_mapQ20_woMT_dedup_shifted_FDR0.01.log
 |
-└── <b>06_Overall_quality_and_info</b>
+└── <p style="color:#F0E5A34";><b>06_Overall_quality_and_info</b></p>
     ├── <b>Counts</b>
     │   ├── counts_summary.txt
     │   └── <b>subread_featureCounts_output</b>
