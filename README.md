@@ -8,7 +8,7 @@
 
 # snakeATAC <img src="https://sebastian-gregoricchio.github.io/snakeATAC/resources/snakeATAC_logo.svg" align="right" height = 150/>
 ## Introduction
-`SnakeATAC` is a snakemake based end-to-end pipeline to analyze ATAC-seq data. The input files required to run the pipeline are Paired-End fastq files. The pipeline include data quality check and normalization. It is included also a step of data reads shifting in order to take into account the Tn5 transposome insertion bias. Indeed, reads should be shifted + 4 bp and − 5 bp for positive and negative strand respectively, to account for the 9-bp duplication created by DNA repair of the nick by Tn5 transposase and achieve base-pair resolution of TF footprint and motif-related analyses ([Yan F., *et al.*, Genome Biol. 2020](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-020-1929-3)).
+`SnakeATAC` is a snakemake based end-to-end pipeline to analyze ATAC-seq data. The input files required to run the pipeline are Paired-End fastq files. The pipeline include data quality check and normalization. It is included also a step of data reads shifting in order to take into account the Tn5 transposome insertion bias. Indeed, reads should be shifted +4bp and −5bp for positive and negative strand respectively, to account for the 9-bp duplication created by DNA repair of the nick by Tn5 transposase and achieve base-pair resolution of TF footprint and motif-related analyses ([Yan F., *et al.*, Genome Biol. 2020](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-020-1929-3)).
 
 ### Citation
 If you use this package, please cite:
@@ -253,10 +253,11 @@ This folder contains a the fastq quality control (fastQC) reports for each fastq
 
 
 ### 02_BAM
-When the reads are aligned onto the reference genome by bwa, the resulting SAM files are filtered for mapping quality (MAPQ) and the mithocondrial (suffix: woMT) reads are removed before sorting.
+When the reads are aligned onto the reference genome by bwa, the resulting SAM files are filtered for mapping quality (MAPQ) and the mithocondrial (suffix: woMT) reads are removed before sorting. Flagstat metrics is generated for each file and stored in the homonym folder.
 
 ### 03_BAM_dedup / 03_BAM_mdup
-PICARD is used to remove (suffix: dedup) or mark (suffix: mdup) duplicates in the BAM files. The resulting BAMs are stored in the subfolder "unshifted_bams". Then, the transposome insertion bias introduced by the Tn5 is corrected by [deeptools alignmentSieve](https://deeptools.readthedocs.io/en/develop/content/tools/alignmentSieve.html) (suffix: shifted).
+PICARD is used to remove (suffix: dedup) or mark (suffix: mdup) duplicates in the BAM files. The resulting BAMs are stored in the subfolder "unshifted_bams", while the PICARD metrics is stored in the "metrics" folder. A fastq quality control (fastQC) and relative multiQC report is performed on the unshifted bams.<br>
+Then, the Tn5 nick reparation bias is corrected by shifting of the reads using [deeptools alignmentSieve](https://deeptools.readthedocs.io/en/develop/content/tools/alignmentSieve.html) (suffix: shifted). Flagstat metrics is generated for each unshifted and shifted bam file and stored in the "falgstat" folder.
 
 
 
