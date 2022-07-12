@@ -215,7 +215,7 @@ The structure of the *output_folder* is the following:
 │   └── <b>normalized_bigWigs</b>
 │       └── <em>sample</em>_mapQ20_woMT_dedup_shifted_normalized_bs5.bw
 │
-├── <b>05_Peaks_MACS3</b>
+├── <b>05_Peaks_MACS3</b> ### --> if HMCan correction is not performed ###
 │   ├── <em>sample</em>_mapQ20_woMT_dedup_shifted_FDR0.01_peaks.narrowPeak
 │   ├── <em>sample</em>_mapQ20_woMT_dedup_shifted_FDR0.01_peaks.xls
 │   ├── <em>sample</em>_mapQ20_woMT_dedup_shifted_FDR0.01_summits.bed
@@ -231,7 +231,6 @@ The structure of the *output_folder* is the following:
     │           ├── <em>sample</em>.readCountInPeaks
     │           ├── <em>sample</em>.readCountInPeaks.log
     │           └── <em>sample</em>.readCountInPeaks.summary
-    ├── Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf
     └── <b>Sample_comparisons</b>
         ├── multiBigWigSummary_matrix_allSamples.npz
         ├── PCA_on_BigWigs_wholeGenome.pdf
@@ -252,14 +251,17 @@ The structure of the *output_folder* is the following:
 ### 01_fastQC_raw
 This folder contains a the fastq quality control (fastQC) reports for each fastq file and a summary report of multiQC.
 
+<br></br>
 
 ### 02_BAM
 When the reads are aligned onto the reference genome by bwa, the resulting SAM files are filtered for mapping quality (MAPQ) and the mithocondrial (suffix: woMT) reads are removed before sorting. Flagstat metrics is generated for each file and stored in the homonym folder.
 
+<br></br>
 
 ### 03_BAM_dedup / 03_BAM_mdup
 PICARD is used to remove (suffix: dedup) or mark (suffix: mdup) duplicates in the BAM files. The resulting BAMs are stored in the subfolder "unshifted_bams", while the PICARD metrics is stored in the "metrics" folder. A fastq quality control (fastQC) and relative multiQC report is performed on the unshifted bams.<br>
-Then, the Tn5 nick reparation bias is corrected by shifting of the reads using [deeptools alignmentSieve](https://deeptools.readthedocs.io/en/develop/content/tools/alignmentSieve.html) (suffix: shifted). Flagstat metrics is generated for each unshifted and shifted bam file and stored in the "falgstat" folder.
+Then, the Tn5 nick reparation bias is corrected by shifting of the reads using [deeptools alignmentSieve](https://deeptools.readthedocs.io/en/develop/content/tools/alignmentSieve.html) (suffix: shifted). Notice that, after shifting, the read sequence information is lost in the shifted BAMs. <br>
+Flagstat metrics is generated for each unshifted and shifted bam file and stored in the "falgstat" folder.
 
 Furthermore, in the "fragmentSizeDistribution_plots" folder the distribution of the fragment sizes for each sample (shifted BAMs) and a file collecting all the plots in a single file. Here after an example of a good (left) and a bad (right) fragment size distribution.
 
@@ -267,15 +269,45 @@ Furthermore, in the "fragmentSizeDistribution_plots" folder the distribution of 
 
 An optimal fragment size distribution should be included within a range of 50-800bp, with a periodicity of ~150bp (corrsponding to mono-, di-, tri-, ... nucleosomes) with a lower intensity for larger fragments.
 
-
-
-
+<br></br>
 
 
 ### 04_Normalization
-PICARD is used to remove (suffix: dedup) or mark (suffix: mdup) duplicates in the BAM files. The resulting BAMs are stored in the subfolder "unshifted_bams", while the PICARD metrics is stored in the "metrics" folder. A fastq quality control (fastQC) and relative multiQC report is performed on the unshifted bams.<br>
-Then, the Tn5 nick reparation bias is corrected by shifting of the reads using [deeptools alignmentSieve](https://deeptools.readthedocs.io/en/develop/content/tools/alignmentSieve.html) (suffix: shifted). Flagstat metrics is generated for each unshifted and shifted bam file and stored in the "falgstat" folder.
+Shifted signal is normalized on sequencing depth library upon copy number variation correction by [HMCan](https://academic.oup.com/bioinformatics/article/29/23/2979/246862?login=false) (if required by the user). The bin size used is indicated in the file name (suffix: bs#).
 
+<br></br>
+
+### 05_Peaks_MACS3 (when HMCan correction is not performed)
+Peaks and summits (if required by the user) are called by MACS3 on shifted BAMs. The FDR (False Discovery Ratio) threshold used is indicated in the file name (suffix: FDR#). When HMCan correction is active, the peaks are called by HMCan itself.
+
+<br></br>
+
+### 06_Overall_quality_and_info
+This folder contains multiple quality controls, feature counts and sample correlation plots:
+
+*  `Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf` is a plot showing the enrichment of the signal allover the genome. Indeed, if a sample does not show any enrichment the reads will equally distributed over the genome resulting in a diagonal line in the plot (left panel). When instead the signal is specific for the feature sought (e.g., open chromatin) it will be enriched only at specific location and the curve will be closer to the bottom-right corner of the plot (right panel).
+
+![lorenz curve examples](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/lorenz_curve_examples.svg)
+
+
+* `Counts`: contains the results of featureCounts (from subread) with the counts of reads and other statistics on called peaks for each sample. It is availble also tab-separated file containing a summary of the main features counts for each sample:
+
+**Summary counts table**
+| Column   |   Description   |
+|------------:|:----------------|
+| Sample | Sample name|
+| Reads_R1 | Number of reads in read.1 fastq file. |
+| Reads_R2 | Number of reads in read.2 fastq file. |
+| Reads_total | Total number of reads (read.1 + read.2). |
+| unfiltered_BAM | Total number of reads in the bam file after filtering by map quality (MAPQ). |
+| Percentage_MT | Approximative percentage of reads represented by the mithocondrial DNA. Ideally lower than 10-20%. |
+| dedup_BAM | Total number of reads left after BAM reads deduplication. |
+| duplicated_reads | Number of duplicated reads. If the duplicates are not remove the value will be 0. |
+| shifted_BAM | Number of reads in the shifted BAMs. |
+| loss_post_shifting | Number of reads lost upon BAM shifting. Consider that reads falling in blacklisted regions are removed. |
+| n.peaks | Total number of peaks called. |
+| FRiP.perc | Frequency Reads in Peaks percentage, corresponds to the number of reads falling in peak regions divide by the total number of reads and multiplied by 100. |
+| FRiP.quality' | A label ("good" or "bad") to indicate whether the FRiP score is good or not for a given sample. The threshold can be changed in the config file by the user, by the default 20 (as suggested by the [ENCODE guidelines](https://www.encodeproject.org/atac-seq/)). |
 
 
 
