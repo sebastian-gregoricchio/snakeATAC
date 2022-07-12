@@ -31,15 +31,15 @@ If you use this package, please cite:
 To install the pipeline it is required to download this repository and the installation of a conda environment is strongly suggested.
 Follow the following steps for the installation:
 * Place yourself in the directory where the repository should be downloaded with `cd </target/folder>`
-* download the GitHub repository `git clone https://github.com/sebastian-gregoricchio/snakeATAC`
-* install the conda environment from the yaml environment file contained in the repository:
+* download the GitHub repository with `git clone https://github.com/sebastian-gregoricchio/snakeATAC`, or click on *Code > Download ZIP* on the GitHub page
+* install the conda environment from the yaml environment file contained in the repository:<br>
 `conda env create -f </target/folder>/snakeATAC/workflow/envs/snakeATAC_conda_env_stable.yaml`
 * activate the environment: `conda activate snakeATAC` (if the env is not activated the pipeline won't work)
 
 <br></br>
 
 ## How to run the pipeline
-The snakemake pipeline requires only two files: a) the `.snakefile`, containing all the rules that will be run; b) the `configuration.yaml` file, in which the user can define and customize all the parameters for the different pipeline steps.
+The snakemake pipeline requires only two files: a) the `.snakefile`, containing all the rules that will be run; b) the `configuration.yaml` file, in which the user can define and customize all the parameters for the different pipeline steps. <br>
 To partially avoid unexpected errors during the execution of the pipeline, a so called 'dry-run' is strongly recommended. Indeed, adding a `-n` at the end of the snakemake running command will allow snakemake to check that all links and file/parameters dependencies are satisfied before to run the "real" processes. This command will therefore help the debugging process.
 
 ```shell
@@ -56,7 +56,16 @@ Notice that the absence of errors does not mean that the pipeline will run witho
 
 
 ### Snakefile
-Explain the rules  + workflow
+The snakefile are contained all the condition checks and rules (processing steps) that will be performed by the pipeline. In the following schematic mapping the main steps performed by the pipeline are depicted. <br>
+Briefly, first of a quality control (fastQC) of the raw fastq data is performed. Then, bwa-mem is used to align the paired-end sequences onto the genome of reference generating temporary SAM files that are further filter for mapping quality score and deprived of mitochondrial reads before to be converted to BAM. From this alignment files duplicated reads are removed (or marked) by PICARD and then shifted to correct the Tn5 nick repair bias ([Yan F., *et al.*, Genome Biol. 2020](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-020-1929-3)) by deeptools alignmentSieve tool. A quality control for each alignment and a multiQC report are generated, as well samtools flagstat metrics and deeptools fragment size distribution plots (see [03_BAM_dedup / 03_BAM_mdup](#03_BAM_dedup-/-03_BAM_mdup) paragraph for more details). <br>
+Then two possible path can be taken in order to normalize the data:
+* *HMcan corection* (still in beta-test phase)<br>
+The sequencing signal can be corrected for Copy Number Variation (CNV); particularly useful for heterogeneous tumor samples. Then the corrected signal in bedGraph format is normalized on sequencing depth by multiplying the scores by the scaling factors computed by  deeptools multiBamSummary. Finally, the normalized bedGraph files are converted to bigWig by the UCSC bedGraphToBigWig tool. HMcan will perfomr the peak calling and generate the narrowPeak files.
+* *Classic method without CNV correction* <br>
+Peaks are called on shifted bam files by MACS3 which will generate narrowPeak files. In parallel bam files are normalized by sequencing depth by deeptools bamCoverage.
+Independently of which method has been chosen, deeptools multiBigwigSummary will be used to generate a whole genome score matrix useful to infer the overall correlation/variability of the samples. This matrix is he input of deeptools plotCorrealtion and poltPCA (see [06_Overall_quality_and_info](#06_Overall_quality_and_info) paragraph for more details). <br>
+Another analyses performed to determine sample variability is the quantification of the signal at any peak called in any sample. For the all the narrowPeak files are concatenated and merged together by bedtools merge and the score at each peak for each sample computed by multiBigwigSummary. The resulting matrix is used to generate two clustered heatmaps: one on the log1p of the raw scores, and one on the z-score (on rows). <br>
+More details on [parameters](#Configuration-file) and structure/meaning of the [results](#Results) can be found in the next paragraphs.
 
 
 ![snakeATAC workflow](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/snakeATAC_workflow.png)
@@ -64,8 +73,8 @@ Explain the rules  + workflow
 
 
 ### Configuration file
-The configuration file is a yaml-formatted file containing all the parameters that are passed to different steps of the pipelines such as the directory with the input files, reference genome, threads of the tools, etc.
-The snakeATAC configuration file is divided in two sections: a) 'experiment-specific', with al the parameters that most likely are changing from experiment to experiment; b) 'common', with parameters that are quite stable independently of the experiments design. The latter should be changed only for very specific needs and is in turn compose by two sections depending on whether the copy number variation is performed or not.
+The configuration file is a yaml-formatted file containing all the parameters that are passed to different steps of the pipelines such as the directory with the input files, reference genome, threads of the tools, etc. <br>
+The snakeATAC configuration file is divided in two sections: a) 'experiment-specific', with al the parameters that most likely are changing from experiment to experiment; b) 'common', with parameters that are quite stable independently of the experiments design. The latter should be changed only for very specific needs and is in turn compose by two sections depending on whether the copy number variation is performed or not. <br>
 Hereafter, the meaning of the different parameters is described.
 
 <br></br>
@@ -262,7 +271,7 @@ When the reads are aligned onto the reference genome by bwa, the resulting SAM f
 <br></br>
 
 ### 03_BAM_dedup / 03_BAM_mdup
-PICARD is used to remove (suffix: dedup) or mark (suffix: mdup) duplicates in the BAM files. The resulting BAMs are stored in the subfolder "unshifted_bams", while the PICARD metrics is stored in the "metrics" folder. A fastq quality control (fastQC) and relative multiQC report is performed on the unshifted bams.<br>
+PICARD is used to remove (suffix: dedup) or mark (suffix: mdup) duplicates in the BAM files. The resulting BAMs are stored in the subfolder "unshifted_bams", while the PICARD metrics is stored in the "metrics" folder. A fastq quality control (fastQC) and relative multiQC report is performed on the unshifted bams. <br>
 Then, the Tn5 nick reparation bias is corrected by shifting of the reads using [deeptools alignmentSieve](https://deeptools.readthedocs.io/en/develop/content/tools/alignmentSieve.html) (suffix: shifted). Notice that, after shifting, the read sequence information is lost in the shifted BAMs. <br>
 Flagstat metrics is generated for each unshifted and shifted bam file and stored in the "falgstat" folder.
 
@@ -322,13 +331,16 @@ This folder contains multiple quality controls, feature counts and sample correl
     - `all_samples_peaks_concatenation_collapsed_sorted.bed`: the peaks called in all samples are merged and collapsed in this bed file;
     - `peaks_score_matrix_all_samples_MACS3.npz`: a matrix containing the average score at each peak (previous bed file) for each samples is generated;
     - `peaks_score_matrix_all_samples_table_MACS3.tsv`: same matrix as before, but in tab-separated format.
-    - `Heatmaps`: the matrix generated on all peaks is used to cluster the samples and two heatmaps are plotted: one on the raw scores, and one on the z-score (on rows)
+    - `Heatmaps`: the matrix generated on all peaks is used to cluster the samples and two heatmaps are plotted: one on the log1p of the raw scores, and one on the z-score (on rows)
   + `Sample_correlation`: scatter and heatmap correlation plots are generated based on the signal over the whole genome. Both Pearson and Spearman methods are used.
 
 <br></br>
 
 
 -----------------
+## Package history and releases
+A list of all releases and respective description of changes applied could be found [here](https://sebastian-gregoricchio.github.io/snakeATAC/NEWS).
+
 ## Contact
 For any suggestion, bug fixing, commentary please report it in the [issues](https://github.com/sebastian-gregoricchio/snakeATAC/issues)/[request](https://github.com/sebastian-gregoricchio/snakeATAC/pulls) tab of this repository.
 
