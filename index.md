@@ -80,8 +80,11 @@ Hereafter, the meaning of the different parameters is described.
 
 <br/><br/>
 
+
+
 #### Experiment-specific section
-| Parameter   |   Description   |
+
+| **Parameter**   |   **Description**   |
 |------------:|:----------------|
 |*runs_directory*| The full path to the directory were the input fastq files are contained, e.g. `/home/user/ATAC/00_runs/`. Importantly, the name of the files, deprived of the read suffix (e.g., _R1/_R2) and file extension (e.g., .fastq.gz) will be used as sample name.|
 |*output_directory*| The full path to the folder in which the results should be stored, e.g. `"/home/user/ATAC/"`. |
@@ -99,8 +102,11 @@ Hereafter, the meaning of the different parameters is described.
 
 <br/><br/>
 
+
+
 #### Common section
-| Parameter   |   Description   |
+
+| **Parameter**   |  **Description**   |
 |------------:|:----------------|
 |*fastQC_threads*| Default: `2`. Number of CPUs to use for [fastQC](https://github.com/s-andrews/FastQC) (fastq quality control) |
 |*bwa_threads*| Default: `8`. Number of CPUs to use for the mapping performed by [bwa-mem](http://bio-bwa.sourceforge.net/bwa.shtml). |
@@ -128,7 +134,7 @@ Hereafter, the meaning of the different parameters is described.
 
 *Copy Number Variation signal correction* (for details see the [HMCan page](https://bitbucket.org/pyminer/hmcan/src/master/))
 
-| Parameter   |   Description   |
+| **Parameter**   |   **Description**   |
 |------------:|:----------------|
 |*HMCan_path*| Full path to the folder containing the HMCan scripts. Instruction for the download and build of HMCan can be found at the the [HMCan page](https://bitbucket.org/pyminer/hmcan/src/master/). |
 |*HMCan_threads*| Default: `12`. Number of CPUs to be used by [HMCan](https://bitbucket.org/pyminer/hmcan/src/master/). |
@@ -158,7 +164,7 @@ Hereafter, the meaning of the different parameters is described.
 
 *Standard normalization and peak calling (without CNV correction)*
 
-| Parameter   |   Description   |
+| **Parameter**   |   **Description**   |
 |------------:|:----------------|
 | *bigWig_binSize* | Default: `5`. Size, in bp, of the bins used to compute the normalized bigWig files. |
 | *normalization_method* | Default: `"RPGC"`, reads per genomic content (1x normalization). Type of normalization to be used to generated the normalized bigWig files by [deeptools bamCoverage](https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html). |
@@ -309,21 +315,21 @@ This folder contains multiple quality controls, feature counts and sample correl
 * `Counts`: contains the results of featureCounts (from subread) with the counts of reads and other statistics on called peaks for each sample. It is availble also tab-separated file containing a summary of the main features counts for each sample: <br><br>
 **Summary counts table description**
 
-| Column   |   Description   |
+| **Column**   |   **Description**   |
 |------------:|:----------------|
 | *Sample* | Sample name |
-| Reads_R1 | Number of reads in read.1 fastq file. |
-| Reads_R2 | Number of reads in read.2 fastq file. |
-| Reads_total | Total number of reads (read.1 + read.2). |
-| unfiltered_BAM | Total number of reads in the bam file after filtering by map quality (MAPQ). |
-| Percentage_MT | Approximative percentage of reads represented by the mithocondrial DNA. Ideally lower than 10-20%. |
-| dedup_BAM | Total number of reads left after BAM reads deduplication. |
-| duplicated_reads | Number of duplicated reads. If the duplicates are not remove the value will be 0. |
-| shifted_BAM | Number of reads in the shifted BAMs. |
-| loss_post_shifting | Number of reads lost upon BAM shifting. Consider that reads falling in blacklisted regions are removed. |
-| n.peaks | Total number of peaks called. |
-| FRiP.perc | Frequency Reads in Peaks percentage, corresponds to the number of reads falling in peak regions divide by the total number of reads and multiplied by 100. |
-| FRiP.quality | A label ("good" or "bad") to indicate whether the FRiP score is good or not for a given sample. The threshold can be changed in the config file by the user, by the default 20 (as suggested by the [ENCODE guidelines](https://www.encodeproject.org/atac-seq/)). |
+| *Reads_R1* | Number of reads in read.1 fastq file. |
+| *Reads_R2* | Number of reads in read.2 fastq file. |
+| *Reads_total* | Total number of reads (read.1 + read.2). |
+| *unfiltered_BAM* | Total number of reads in the bam file after filtering by map quality (MAPQ). |
+| *Percentage_MT* | Approximative percentage of reads represented by the mithocondrial DNA. Ideally lower than 10-20%. |
+| *dedup_BAM* | Total number of reads left after BAM reads deduplication. |
+| *duplicated_reads* | Number of duplicated reads. If the duplicates are not remove the value will be 0. |
+| *shifted_BAM* | Number of reads in the shifted BAMs. |
+| *loss_post_shifting* | Number of reads lost upon BAM shifting. Consider that reads falling in blacklisted regions are removed. |
+| *n.peaks* | Total number of peaks called. |
+| *FRiP.perc* | Frequency Reads in Peaks percentage, corresponds to the number of reads falling in peak regions divide by the total number of reads and multiplied by 100. |
+| *FRiP.quality* | A label ("good" or "bad") to indicate whether the FRiP score is good or not for a given sample. The threshold can be changed in the config file by the user, by the default 20 (as suggested by the [ENCODE guidelines](https://www.encodeproject.org/atac-seq/)). |
 
 <br/><br/>
 
