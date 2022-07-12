@@ -202,6 +202,7 @@ The structure of the *output_folder* is the following:
 │   │   ├── <em>sample</em>_flagstat_filtered_bam_woMT_dedup.txt
 │   │   └── <em>sample</em>_flagstat_woMT_dedup_shifted_sorted.txt
 │   ├── <b>fragmentSizeDistribution_plots</b>
+|   |   ├── ALL.samples_fragment_size_distribution.pdf
 │   │   └── <em>sample</em>_fragment_size_distribution.pdf
 │   ├── <b>metrics</b>
 │   │   └── <em>sample</em>_metrics_woMT_dedup_bam.txt
@@ -255,9 +256,26 @@ This folder contains a the fastq quality control (fastQC) reports for each fastq
 ### 02_BAM
 When the reads are aligned onto the reference genome by bwa, the resulting SAM files are filtered for mapping quality (MAPQ) and the mithocondrial (suffix: woMT) reads are removed before sorting. Flagstat metrics is generated for each file and stored in the homonym folder.
 
+
 ### 03_BAM_dedup / 03_BAM_mdup
 PICARD is used to remove (suffix: dedup) or mark (suffix: mdup) duplicates in the BAM files. The resulting BAMs are stored in the subfolder "unshifted_bams", while the PICARD metrics is stored in the "metrics" folder. A fastq quality control (fastQC) and relative multiQC report is performed on the unshifted bams.<br>
 Then, the Tn5 nick reparation bias is corrected by shifting of the reads using [deeptools alignmentSieve](https://deeptools.readthedocs.io/en/develop/content/tools/alignmentSieve.html) (suffix: shifted). Flagstat metrics is generated for each unshifted and shifted bam file and stored in the "falgstat" folder.
+
+Furthermore, in the "fragmentSizeDistribution_plots" folder the distribution of the fragment sizes for each sample (shifted BAMs) and a file collecting all the plots in a single file. Here after an example of a good (left) and a bad (right) fragment size distribution.
+
+![fragment size distribution examples](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/fragmentSize_distribution_examples.svg)
+
+An optimal fragment size distribution should be included within a range of 50-800bp, with a periodicity of ~150bp (corrsponding to mono-, di-, tri-, ... nucleosomes) with a lower intensity for larger fragments.
+
+
+
+
+
+
+### 04_Normalization
+PICARD is used to remove (suffix: dedup) or mark (suffix: mdup) duplicates in the BAM files. The resulting BAMs are stored in the subfolder "unshifted_bams", while the PICARD metrics is stored in the "metrics" folder. A fastq quality control (fastQC) and relative multiQC report is performed on the unshifted bams.<br>
+Then, the Tn5 nick reparation bias is corrected by shifting of the reads using [deeptools alignmentSieve](https://deeptools.readthedocs.io/en/develop/content/tools/alignmentSieve.html) (suffix: shifted). Flagstat metrics is generated for each unshifted and shifted bam file and stored in the "falgstat" folder.
+
 
 
 
