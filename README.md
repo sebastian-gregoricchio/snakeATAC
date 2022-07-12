@@ -291,7 +291,7 @@ This folder contains multiple quality controls, feature counts and sample correl
 
 
 * `Counts`: contains the results of featureCounts (from subread) with the counts of reads and other statistics on called peaks for each sample. It is availble also tab-separated file containing a summary of the main features counts for each sample: <br>
-**Summary counts table**
+**Summary counts table** <br>
 | Column   |   Description   |
 |------------:|:----------------|
 | Sample | Sample name|
