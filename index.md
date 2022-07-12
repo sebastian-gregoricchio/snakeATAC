@@ -69,7 +69,7 @@ Another analyses performed to determine sample variability is the quantification
 More details on [parameters](#Configuration-file) and structure/meaning of the [results](#Results) can be found in the next paragraphs.
 
 
-![snakeATAC workflow](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/snakeATAC_workflow.png)
+![snakeATAC workflow](https://sebastian-gregoricchio.github.io/snakeATAC/resources/snakeATAC_workflow.png)
 
 
 
@@ -278,7 +278,7 @@ Flagstat metrics is generated for each unshifted and shifted bam file and stored
 
 Furthermore, in the "fragmentSizeDistribution_plots" folder the distribution of the fragment sizes for each sample (shifted BAMs) and a file collecting all the plots in a single file. Here after an example of a good (left) and a bad (right) fragment size distribution.
 
-![fragment size distribution examples](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/fragmentSize_distribution_examples.svg)
+![fragment size distribution examples](https://sebastian-gregoricchio.github.io/snakeATAC/resources/fragmentSize_distribution_examples.svg)
 
 An optimal fragment size distribution should be included within a range of 50-800bp, with a periodicity of ~150bp (corrsponding to mono-, di-, tri-, ... nucleosomes) with a lower intensity for larger fragments.
 
@@ -300,7 +300,7 @@ This folder contains multiple quality controls, feature counts and sample correl
 
 *  `Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf` is a plot showing the enrichment of the signal allover the genome. Indeed, if a sample does not show any enrichment the reads will equally distributed over the genome resulting in a diagonal line in the plot (left panel). When instead the signal is specific for the feature sought (e.g., open chromatin) it will be enriched only at specific location and the curve will be closer to the bottom-right corner of the plot (right panel).
 
-![lorenz curve examples](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/lorenz_curve_examples.svg)
+![lorenz curve examples](https://sebastian-gregoricchio.github.io/snakeATAC/resources/lorenz_curve_examples.svg)
 
 <br/><br/>
 
