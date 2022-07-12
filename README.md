@@ -290,8 +290,9 @@ This folder contains multiple quality controls, feature counts and sample correl
 ![lorenz curve examples](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/lorenz_curve_examples.svg)
 
 
-* `Counts`: contains the results of featureCounts (from subread) with the counts of reads and other statistics on called peaks for each sample. It is availble also tab-separated file containing a summary of the main features counts for each sample: <br>
-**Summary counts table** <br>
+* `Counts`: contains the results of featureCounts (from subread) with the counts of reads and other statistics on called peaks for each sample. It is availble also tab-separated file containing a summary of the main features counts for each sample: <br><br>
+**Summary counts table**
+
 | Column   |   Description   |
 |------------:|:----------------|
 | Sample | Sample name|
