@@ -59,6 +59,9 @@ Notice that the absence of errors does not mean that the pipeline will run witho
 Explain the rules  + workflow
 
 
+![snakeATAC workflow](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/snakeATAC_workflow.svg)
+
+
 
 ### Configuration file
 The configuration file is a yaml-formatted file containing all the parameters that are passed to different steps of the pipelines such as the directory with the input files, reference genome, threads of the tools, etc.
