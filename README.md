@@ -82,7 +82,7 @@ Hereafter, the meaning of the different parameters is described.
 |*call_variants*| If `true`, variant calling by [GATK4](https://gatk.broadinstitute.org/hc/en-us) will be performed. **Variant calling is still in beta-test phase.** |
 |*call_SNPs*| If `true`, Single Nucleotide Variation (SNP) calling by [GATK4](https://gatk.broadinstitute.org/hc/en-us) will be performed. **Variant calling is still in beta-test phase.** |
 |*call_indels*| If `true`, Insertion/Deletion (indel) calling by [GATK4](https://gatk.broadinstitute.org/hc/en-us) will be performed. **Variant calling is still in beta-test phase.** |
-|*dbsnp_file*| SNP database file (.dbsnp) for base recalibration required by [GATK4](https://gatk.broadinstitute.org/hc/en-us). It could happen that your .bam files contain the 'chr' prefix in the chromosome names while your dbSNP file does not (or viceversa). This can be fixed in the .dbsnp file with the [`bcftools annotate --rename-chrs`](http://samtools.github.io/bcftools/bcftools.html#annotate) command. For Hg38, for istance, the dbSNP file can be downloaded from the [broad institute cloud storage](https://console.cloud.google.com/storage/browser/genomics-public-data/resources/broad/hg38/v0/). Do not forget to download the INDEX as well!|
+|*dbsnp_file*| SNP database file (.dbsnp) for base recalibration required by [GATK4](https://gatk.broadinstitute.org/hc/en-us). It could happen that your .bam files contain the 'chr' prefix in the chromosome names while your dbSNP file does not (or viceversa). This can be fixed in the .dbsnp file with the [`bcftools annotate --rename-chrs`](http://samtools.github.io/bcftools/bcftools.html#annotate) command. For Hg38, for istance, the dbSNP file can be downloaded from the [broad institute cloud storage](https://console.cloud.google.com/storage/browser/genomics-public-data/resources/broad/hg38/v0/). Do not forget to download the INDEX as well! |
 
 <br></br>
 
@@ -152,8 +152,6 @@ Hereafter, the meaning of the different parameters is described.
 |*FDR_cutoff*| Deafult: `0.01`. False Discovery Ratio (FDR) cutoff used by [MACS3](https://github.com/macs3-project/MACS) to filter the significant peaks. |
 |*call_summits*| Default: `"True"`. Logical value to define whether [MACS3](https://github.com/macs3-project/MACS) should also call the peak summits (position with the highest value). |
 |*FRiP_threshold*| Default `20`. This value will be used to label the FRiP (Fraction of Reads in a Peak) score as "good" or "bad in the summary table for each single sample. A FRiP above the 20% (FRiP = 0.02) is considered a good score for ATAC-seq peaks by the [ENCODE guidelines](https://www.encodeproject.org/atac-seq/). |
-
-
 
 <br></br>
 
@@ -238,6 +236,9 @@ The structure of the *output_folder* is the following:
         │   ├── all_samples_peaks_concatenation_collapsed_sorted.bed
         │   ├── peaks_score_matrix_all_samples_MACS3.npz
         │   └── peaks_score_matrix_all_samples_table_MACS3.tsv
+        |   └── <b>Heatmaps</b>
+        |       ├── Heatmap_on_log1p.rawScores_for_MACS3.peaks_union_population.pdf
+        │       └── Heatmap_on_zScores_for_MACS3.peaks_union_population.pdf
         └── <b>Sample_correlation</b>
             ├── Correlation_heatmap_on_BigWigs_wholeGenome_pearsonMethod.pdf
             ├── Correlation_heatmap_on_BigWigs_wholeGenome_spearmanMethod.pdf
@@ -245,8 +246,7 @@ The structure of the *output_folder* is the following:
             └── Correlation_scatterplot_on_BigWigs_wholeGenome_spearmanMethod.pdf
 </pre>
 
-
-
+<br></br>
 
 ### 01_fastQC_raw
 This folder contains a the fastq quality control (fastQC) reports for each fastq file and a summary report of multiQC.
@@ -289,9 +289,10 @@ This folder contains multiple quality controls, feature counts and sample correl
 
 ![lorenz curve examples](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/lorenz_curve_examples.svg)
 
+<br></br>
 
 * `Counts`: contains the results of featureCounts (from subread) with the counts of reads and other statistics on called peaks for each sample. It is availble also tab-separated file containing a summary of the main features counts for each sample: <br><br>
-**Summary counts table**
+**Summary counts table description**
 
 | Column   |   Description   |
 |------------:|:----------------|
@@ -307,33 +308,22 @@ This folder contains multiple quality controls, feature counts and sample correl
 | loss_post_shifting | Number of reads lost upon BAM shifting. Consider that reads falling in blacklisted regions are removed. |
 | n.peaks | Total number of peaks called. |
 | FRiP.perc | Frequency Reads in Peaks percentage, corresponds to the number of reads falling in peak regions divide by the total number of reads and multiplied by 100. |
-| FRiP.quality' | A label ("good" or "bad") to indicate whether the FRiP score is good or not for a given sample. The threshold can be changed in the config file by the user, by the default 20 (as suggested by the [ENCODE guidelines](https://www.encodeproject.org/atac-seq/)). |
-
-
-
-
-summmary file
-
-
-
-
+| FRiP.quality | A label ("good" or "bad") to indicate whether the FRiP score is good or not for a given sample. The threshold can be changed in the config file by the user, by the default 20 (as suggested by the [ENCODE guidelines](https://www.encodeproject.org/atac-seq/)). |
 
 <br></br>
 
-
-
-# Changing names
-```
-for i in $(dir *f*.gz)
-do
-  R1=$(echo $i | sed 's/_1/_R1/')
-  R2=$(echo $R1 | sed 's/_2/_R2/')
-  mv $i $R2
-done
-```
-
+* `Sample_comparisons`: the plots in this folder help the user to understand the variability of the samples.
+  + `multiBigWigSummary_matrix_allSamples.npz`: result of deeptools multiBigWigSummary used to plot the PCA and correlation plots;
+  + `PCA_on_BigWigs_wholeGenome.pdf`: Principal Component Analyses results of the signal allover the genome;
+  + `Peak_comparison`:
+    - `all_samples_peaks_concatenation_collapsed_sorted.bed`: the peaks called in all samples are merged and collapsed in this bed file;
+    - `peaks_score_matrix_all_samples_MACS3.npz`: a matrix containing the average score at each peak (previous bed file) for each samples is generated;
+    - `peaks_score_matrix_all_samples_table_MACS3.tsv`: same matrix as before, but in tab-separated format.
+    - `Heatmaps`: the matrix generated on all peaks is used to cluster the samples and two heatmaps are plotted: one on the raw scores, and one on the z-score (on rows)
+  + `Sample_correlation`: scatter and heatmap correlation plots are generated based on the signal over the whole genome. Both Pearson and Spearman methods are used.
 
 <br></br>
+
 
 -----------------
 ## Contact
