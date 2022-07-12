@@ -6,7 +6,7 @@
 ![visits](https://badges.pufler.dev/visits/sebastian-gregoricchio/snakeATAC)
 ![downloads](https://img.shields.io/github/downloads/sebastian-gregoricchio/Rseb/total.svg)--->
 
-# snakeATAC [<img src="https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/snakeATAC_logo.svg" align="right" height = 150/>](https://sebastian-gregoricchio.github.io/snakeATAC)
+# snakeATAC [<img src="https://raw.githubusercontent.com/sebastian-gregoricchio/snakeATAC/main/resources/snakeATAC_logo.svg" align="right" height = 150/>](https://sebastian-gregoricchio.github.io/snakeATAC)
 ## Introduction
 `SnakeATAC` is a snakemake based end-to-end pipeline to analyze ATAC-seq data. The input files required to run the pipeline are Paired-End fastq files. The pipeline include data quality check and normalization. It is included also a step of data reads shifting in order to take into account the Tn5 transposome insertion bias. Indeed, reads should be shifted +4bp and −5bp for positive and negative strand respectively, to account for the 9-bp duplication created by DNA repair of the nick by Tn5 transposase and achieve base-pair resolution of TF footprint and motif-related analyses ([Yan F., *et al.*, Genome Biol. 2020](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-020-1929-3)).
 
@@ -25,7 +25,7 @@ If you use this package, please cite:
 </span>
 </div>
 
-<br></br>
+<br/><br/>
 
 ## Installation an dependencies
 To install the pipeline it is required to download this repository and the installation of a conda environment is strongly suggested.
@@ -36,7 +36,7 @@ Follow the following steps for the installation:
 `conda env create -f </target/folder>/snakeATAC/workflow/envs/snakeATAC_conda_env_stable.yaml`
 * activate the environment: `conda activate snakeATAC` (if the env is not activated the pipeline won't work)
 
-<br></br>
+<br/><br/>
 
 ## How to run the pipeline
 The snakemake pipeline requires only two files: a) the `.snakefile`, containing all the rules that will be run; b) the `configuration.yaml` file, in which the user can define and customize all the parameters for the different pipeline steps. <br>
@@ -54,7 +54,7 @@ snakemake -s </target/folder>/snakeATAC/workflow/snakeATAC.snakefile --configfil
 
 Notice that the absence of errors does not mean that the pipeline will run without any issues; the "dry-run" is only checking whether all the resources are available.
 
-<br></br>
+<br/><br/>
 
 ### Snakefile
 The snakefile are contained all the condition checks and rules (processing steps) that will be performed by the pipeline. In the following schematic mapping the main steps performed by the pipeline are depicted. <br>
@@ -69,7 +69,7 @@ Another analyses performed to determine sample variability is the quantification
 More details on [parameters](#Configuration-file) and structure/meaning of the [results](#Results) can be found in the next paragraphs.
 
 
-![snakeATAC workflow](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/snakeATAC_workflow.png)
+![snakeATAC workflow](https://sebastian-gregoricchio.github.io/snakeATAC/resources/snakeATAC_workflow.png)
 
 
 
@@ -78,10 +78,13 @@ The configuration file is a yaml-formatted file containing all the parameters th
 The snakeATAC configuration file is divided in two sections: a) 'experiment-specific', with al the parameters that most likely are changing from experiment to experiment; b) 'common', with parameters that are quite stable independently of the experiments design. The latter should be changed only for very specific needs and is in turn compose by two sections depending on whether the copy number variation is performed or not. <br>
 Hereafter, the meaning of the different parameters is described.
 
-<br></br>
+<br/><br/>
+
+
 
 #### Experiment-specific section
-| Parameter   |   Description   |
+
+| **Parameter**   |   **Description**   |
 |------------:|:----------------|
 |*runs_directory*| The full path to the directory were the input fastq files are contained, e.g. `/home/user/ATAC/00_runs/`. Importantly, the name of the files, deprived of the read suffix (e.g., _R1/_R2) and file extension (e.g., .fastq.gz) will be used as sample name.|
 |*output_directory*| The full path to the folder in which the results should be stored, e.g. `"/home/user/ATAC/"`. |
@@ -97,10 +100,13 @@ Hereafter, the meaning of the different parameters is described.
 |*call_indels*| If `true`, Insertion/Deletion (indel) calling by [GATK4](https://gatk.broadinstitute.org/hc/en-us) will be performed. **Variant calling is still in beta-test phase.** |
 |*dbsnp_file*| SNP database file (.dbsnp) for base recalibration required by [GATK4](https://gatk.broadinstitute.org/hc/en-us). It could happen that your .bam files contain the 'chr' prefix in the chromosome names while your dbSNP file does not (or viceversa). This can be fixed in the .dbsnp file with the [`bcftools annotate --rename-chrs`](http://samtools.github.io/bcftools/bcftools.html#annotate) command. For Hg38, for istance, the dbSNP file can be downloaded from the [broad institute cloud storage](https://console.cloud.google.com/storage/browser/genomics-public-data/resources/broad/hg38/v0/). Do not forget to download the INDEX as well! |
 
-<br></br>
+<br/><br/>
+
+
 
 #### Common section
-| Parameter   |   Description   |
+
+| **Parameter**   |  **Description**   |
 |------------:|:----------------|
 |*fastQC_threads*| Default: `2`. Number of CPUs to use for [fastQC](https://github.com/s-andrews/FastQC) (fastq quality control) |
 |*bwa_threads*| Default: `8`. Number of CPUs to use for the mapping performed by [bwa-mem](http://bio-bwa.sourceforge.net/bwa.shtml). |
@@ -124,10 +130,11 @@ Hereafter, the meaning of the different parameters is described.
 |*heatmap_color*| Default: `"Blues"`. A string indicating the color gradient pattern to use for the correlation heatmaps. This value is passed to matplotlib/seaborn. Therefore, available options (see [matplotlib page](https://matplotlib.org/stable/tutorials/colors/colormaps.html) for examples) are the following: 'Accent', 'Blues', 'BrBG', 'BuGn', 'BuPu', 'CMRmap', 'Dark2', 'GnBu', 'Greens', 'Greys', 'OrRd', 'Oranges', 'PRGn', 'Paired', 'Pastel1', 'Pastel2', 'PiYG', 'PuBu', 'PuBuGn', 'PuOr', 'PuRd', 'Purples', 'RdBu', 'RdGy', 'RdPu', 'RdYlBu', 'RdYlGn', 'Reds', 'Set1', 'Set2', 'Set3', 'Spectral', 'Wistia', 'YlGn', 'YlGnBu', 'YlOrBr', 'YlOrRd', 'afmhot', 'autumn', 'binary', 'bone', 'brg', 'bwr', 'cividis', 'cool', 'coolwarm', 'copper', 'cubehelix', 'flag', 'gist_earth', 'gist_gray', 'gist_heat', 'gist_ncar', 'gist_rainbow', 'gist_stern', 'gist_yarg', 'gnuplot', 'gnuplot2', 'gray', 'hot', 'hsv', 'icefire', 'inferno', 'jet', 'magma', 'mako', 'nipy_spectral', 'ocean', 'pink', 'plasma', 'prism', 'rainbow', 'rocket', 'seismic', 'spring', 'summer', 'tab10', 'tab20', 'tab20b', 'tab20c', 'terrain', 'twilight', 'twilight_shifted', 'viridis', 'vlag', 'winter'. |
 |*zScore_heatmap_color*| Default: `"seismic"`. A string indicating the color gradient pattern to use for the peak score heatmaps. This value is passed to matplotlib/seaborn. Therefore, available options (see [matplotlib page](https://matplotlib.org/stable/tutorials/colors/colormaps.html) for examples) are the following: 'Accent', 'Blues', 'BrBG', 'BuGn', 'BuPu', 'CMRmap', 'Dark2', 'GnBu', 'Greens', 'Greys', 'OrRd', 'Oranges', 'PRGn', 'Paired', 'Pastel1', 'Pastel2', 'PiYG', 'PuBu', 'PuBuGn', 'PuOr', 'PuRd', 'Purples', 'RdBu', 'RdGy', 'RdPu', 'RdYlBu', 'RdYlGn', 'Reds', 'Set1', 'Set2', 'Set3', 'Spectral', 'Wistia', 'YlGn', 'YlGnBu', 'YlOrBr', 'YlOrRd', 'afmhot', 'autumn', 'binary', 'bone', 'brg', 'bwr', 'cividis', 'cool', 'coolwarm', 'copper', 'cubehelix', 'flag', 'gist_earth', 'gist_gray', 'gist_heat', 'gist_ncar', 'gist_rainbow', 'gist_stern', 'gist_yarg', 'gnuplot', 'gnuplot2', 'gray', 'hot', 'hsv', 'icefire', 'inferno', 'jet', 'magma', 'mako', 'nipy_spectral', 'ocean', 'pink', 'plasma', 'prism', 'rainbow', 'rocket', 'seismic', 'spring', 'summer', 'tab10', 'tab20', 'tab20b', 'tab20c', 'terrain', 'twilight', 'twilight_shifted', 'viridis', 'vlag', 'winter'. |
 
-<br></br>
+<br/><br/>
 
 *Copy Number Variation signal correction* (for details see the [HMCan page](https://bitbucket.org/pyminer/hmcan/src/master/))
-| Parameter   |   Description   |
+
+| **Parameter**   |   **Description**   |
 |------------:|:----------------|
 |*HMCan_path*| Full path to the folder containing the HMCan scripts. Instruction for the download and build of HMCan can be found at the the [HMCan page](https://bitbucket.org/pyminer/hmcan/src/master/). |
 |*HMCan_threads*| Default: `12`. Number of CPUs to be used by [HMCan](https://bitbucket.org/pyminer/hmcan/src/master/). |
@@ -153,20 +160,21 @@ Hereafter, the meaning of the different parameters is described.
 |*CNAnormalization*| Default: `"True"` (used to build an HMCan configFile). For details see the [HMCan page](https://bitbucket.org/pyminer/hmcan/src/master/). |
 |*multiBamSummary_threads*| Default: `6`. Number of CPUs to be used by [deeptools multiBamSummary](https://deeptools.readthedocs.io/en/develop/content/tools/multiBamSummary.html) in order to compute an average signal over all the genome for each sample for the calculation of the scaling factors. This factors will be used to normalize the CNV corrected signal by sequencing depth.|
 
-<br></br>
+<br/><br/>
 
 *Standard normalization and peak calling (without CNV correction)*
-| Parameter   |   Description   |
-|------------:|:----------------|
-|*bigWig_binSize*| Default: `5`. Size, in bp, of the bins used to compute the normalized bigWig files. |
-|*normalization_method*| Default: `"RPGC"`, reads per genomic content (1x normalization). Type of normalization to be used to generated the normalized bigWig files by [deeptools bamCoverage](https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html). |
-|*bamCoverage_threads*| Default: `8`. Number of CPUs to be used by [deeptools bamCoverage](https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html) in order to compute the signal normalization and the bigWig generation. |
-|*genome_size_MACS*| A string or a number indicating the genome size to use by [MACS3](https://github.com/macs3-project/MACS) for the peak calling. Example: `"hs"`. Some values: hs = 2.7e9, mm = 1.87e9, ce = 9e7, dm = 1.2e8. |
-|*FDR_cutoff*| Deafult: `0.01`. False Discovery Ratio (FDR) cutoff used by [MACS3](https://github.com/macs3-project/MACS) to filter the significant peaks. |
-|*call_summits*| Default: `"True"`. Logical value to define whether [MACS3](https://github.com/macs3-project/MACS) should also call the peak summits (position with the highest value). |
-|*FRiP_threshold*| Default `20`. This value will be used to label the FRiP (Fraction of Reads in a Peak) score as "good" or "bad in the summary table for each single sample. A FRiP above the 20% (FRiP = 0.02) is considered a good score for ATAC-seq peaks by the [ENCODE guidelines](https://www.encodeproject.org/atac-seq/). |
 
-<br></br>
+| **Parameter**   |   **Description**   |
+|------------:|:----------------|
+| *bigWig_binSize* | Default: `5`. Size, in bp, of the bins used to compute the normalized bigWig files. |
+| *normalization_method* | Default: `"RPGC"`, reads per genomic content (1x normalization). Type of normalization to be used to generated the normalized bigWig files by [deeptools bamCoverage](https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html). |
+| *bamCoverage_threads* | Default: `8`. Number of CPUs to be used by [deeptools bamCoverage](https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html) in order to compute the signal normalization and the bigWig generation. |
+| *genome_size_MACS* | A string or a number indicating the genome size to use by [MACS3](https://github.com/macs3-project/MACS) for the peak calling. Example: `"hs"`. Some values: hs = 2.7e9, mm = 1.87e9, ce = 9e7, dm = 1.2e8. |
+| *FDR_cutoff* | Deafult: `0.01`. False Discovery Ratio (FDR) cutoff used by [MACS3](https://github.com/macs3-project/MACS) to filter the significant peaks. |
+| *call_summits* | Default: `"True"`. Logical value to define whether [MACS3](https://github.com/macs3-project/MACS) should also call the peak summits (position with the highest value). |
+| *FRiP_threshold* | Default `20`. This value will be used to label the FRiP (Fraction of Reads in a Peak) score as "good" or "bad in the summary table for each single sample. A FRiP above the 20% (FRiP = 0.02) is considered a good score for ATAC-seq peaks by the [ENCODE guidelines](https://www.encodeproject.org/atac-seq/). |
+
+<br/><br/>
 
 
 ## Results
@@ -259,17 +267,17 @@ The structure of the *output_folder* is the following:
             └── Correlation_scatterplot_on_BigWigs_wholeGenome_spearmanMethod.pdf
 </pre>
 
-<br></br>
+<br/><br/>
 
 ### 01_fastQC_raw
 This folder contains a the fastq quality control (fastQC) reports for each fastq file and a summary report of multiQC.
 
-<br></br>
+<br/><br/>
 
 ### 02_BAM
 When the reads are aligned onto the reference genome by bwa, the resulting SAM files are filtered for mapping quality (MAPQ) and the mithocondrial (suffix: woMT) reads are removed before sorting. Flagstat metrics is generated for each file and stored in the homonym folder.
 
-<br></br>
+<br/><br/>
 
 ### 03_BAM_dedup / 03_BAM_mdup
 PICARD is used to remove (suffix: dedup) or mark (suffix: mdup) duplicates in the BAM files. The resulting BAMs are stored in the subfolder "unshifted_bams", while the PICARD metrics is stored in the "metrics" folder. A fastq quality control (fastQC) and relative multiQC report is performed on the unshifted bams. <br>
@@ -278,52 +286,52 @@ Flagstat metrics is generated for each unshifted and shifted bam file and stored
 
 Furthermore, in the "fragmentSizeDistribution_plots" folder the distribution of the fragment sizes for each sample (shifted BAMs) and a file collecting all the plots in a single file. Here after an example of a good (left) and a bad (right) fragment size distribution.
 
-![fragment size distribution examples](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/fragmentSize_distribution_examples.svg)
+![fragment size distribution examples](https://sebastian-gregoricchio.github.io/snakeATAC/resources/fragmentSize_distribution_examples.svg)
 
 An optimal fragment size distribution should be included within a range of 50-800bp, with a periodicity of ~150bp (corrsponding to mono-, di-, tri-, ... nucleosomes) with a lower intensity for larger fragments.
 
-<br></br>
+<br/><br/>
 
 
 ### 04_Normalization
 Shifted signal is normalized on sequencing depth library upon copy number variation correction by [HMCan](https://academic.oup.com/bioinformatics/article/29/23/2979/246862?login=false) (if required by the user). The bin size used is indicated in the file name (suffix: bs#).
 
-<br></br>
+<br/><br/>
 
 ### 05_Peaks_MACS3 (when HMCan correction is not performed)
 Peaks and summits (if required by the user) are called by MACS3 on shifted BAMs. The FDR (False Discovery Ratio) threshold used is indicated in the file name (suffix: FDR#). When HMCan correction is active, the peaks are called by HMCan itself.
 
-<br></br>
+<br/><br/>
 
 ### 06_Overall_quality_and_info
 This folder contains multiple quality controls, feature counts and sample correlation plots:
 
 *  `Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf` is a plot showing the enrichment of the signal allover the genome. Indeed, if a sample does not show any enrichment the reads will equally distributed over the genome resulting in a diagonal line in the plot (left panel). When instead the signal is specific for the feature sought (e.g., open chromatin) it will be enriched only at specific location and the curve will be closer to the bottom-right corner of the plot (right panel).
 
-![lorenz curve examples](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/lorenz_curve_examples.svg)
+![lorenz curve examples](https://sebastian-gregoricchio.github.io/snakeATAC/resources/lorenz_curve_examples.svg)
 
-<br></br>
+<br/><br/>
 
 * `Counts`: contains the results of featureCounts (from subread) with the counts of reads and other statistics on called peaks for each sample. It is availble also tab-separated file containing a summary of the main features counts for each sample: <br><br>
 **Summary counts table description**
 
-| Column   |   Description   |
+| **Column**   |   **Description**   |
 |------------:|:----------------|
-| Sample | Sample name|
-| Reads_R1 | Number of reads in read.1 fastq file. |
-| Reads_R2 | Number of reads in read.2 fastq file. |
-| Reads_total | Total number of reads (read.1 + read.2). |
-| unfiltered_BAM | Total number of reads in the bam file after filtering by map quality (MAPQ). |
-| Percentage_MT | Approximative percentage of reads represented by the mithocondrial DNA. Ideally lower than 10-20%. |
-| dedup_BAM | Total number of reads left after BAM reads deduplication. |
-| duplicated_reads | Number of duplicated reads. If the duplicates are not remove the value will be 0. |
-| shifted_BAM | Number of reads in the shifted BAMs. |
-| loss_post_shifting | Number of reads lost upon BAM shifting. Consider that reads falling in blacklisted regions are removed. |
-| n.peaks | Total number of peaks called. |
-| FRiP.perc | Frequency Reads in Peaks percentage, corresponds to the number of reads falling in peak regions divide by the total number of reads and multiplied by 100. |
-| FRiP.quality | A label ("good" or "bad") to indicate whether the FRiP score is good or not for a given sample. The threshold can be changed in the config file by the user, by the default 20 (as suggested by the [ENCODE guidelines](https://www.encodeproject.org/atac-seq/)). |
+| *Sample* | Sample name |
+| *Reads_R1* | Number of reads in read.1 fastq file. |
+| *Reads_R2* | Number of reads in read.2 fastq file. |
+| *Reads_total* | Total number of reads (read.1 + read.2). |
+| *unfiltered_BAM* | Total number of reads in the bam file after filtering by map quality (MAPQ). |
+| *Percentage_MT* | Approximative percentage of reads represented by the mithocondrial DNA. Ideally lower than 10-20%. |
+| *dedup_BAM* | Total number of reads left after BAM reads deduplication. |
+| *duplicated_reads* | Number of duplicated reads. If the duplicates are not remove the value will be 0. |
+| *shifted_BAM* | Number of reads in the shifted BAMs. |
+| *loss_post_shifting* | Number of reads lost upon BAM shifting. Consider that reads falling in blacklisted regions are removed. |
+| *n.peaks* | Total number of peaks called. |
+| *FRiP.perc* | Frequency Reads in Peaks percentage, corresponds to the number of reads falling in peak regions divide by the total number of reads and multiplied by 100. |
+| *FRiP.quality* | A label ("good" or "bad") to indicate whether the FRiP score is good or not for a given sample. The threshold can be changed in the config file by the user, by the default 20 (as suggested by the [ENCODE guidelines](https://www.encodeproject.org/atac-seq/)). |
 
-<br></br>
+<br/><br/>
 
 * `Sample_comparisons`: the plots in this folder help the user to understand the variability of the samples.
   + `multiBigWigSummary_matrix_allSamples.npz`: result of deeptools multiBigWigSummary used to plot the PCA and correlation plots;
@@ -335,7 +343,7 @@ This folder contains multiple quality controls, feature counts and sample correl
     - `Heatmaps`: the matrix generated on all peaks is used to cluster the samples and two heatmaps are plotted: one on the log1p of the raw scores, and one on the z-score (on rows)
   + `Sample_correlation`: scatter and heatmap correlation plots are generated based on the signal over the whole genome. Both Pearson and Spearman methods are used.
 
-<br></br>
+<br/><br/>
 
 
 -----------------
