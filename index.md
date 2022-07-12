@@ -127,6 +127,7 @@ Hereafter, the meaning of the different parameters is described.
 <br/><br/>
 
 *Copy Number Variation signal correction* (for details see the [HMCan page](https://bitbucket.org/pyminer/hmcan/src/master/))
+
 | Parameter   |   Description   |
 |------------:|:----------------|
 |*HMCan_path*| Full path to the folder containing the HMCan scripts. Instruction for the download and build of HMCan can be found at the the [HMCan page](https://bitbucket.org/pyminer/hmcan/src/master/). |
@@ -156,6 +157,7 @@ Hereafter, the meaning of the different parameters is described.
 <br/><br/>
 
 *Standard normalization and peak calling (without CNV correction)*
+
 | Parameter   |   Description   |
 |------------:|:----------------|
 | *bigWig_binSize* | Default: `5`. Size, in bp, of the bins used to compute the normalized bigWig files. |
