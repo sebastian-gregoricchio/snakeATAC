@@ -311,7 +311,7 @@ This folder contains multiple quality controls, feature counts and sample correl
 
 | Column   |   Description   |
 |------------:|:----------------|
-| Sample | Sample name |
+| *Sample* | Sample name |
 | Reads_R1 | Number of reads in read.1 fastq file. |
 | Reads_R2 | Number of reads in read.2 fastq file. |
 | Reads_total | Total number of reads (read.1 + read.2). |
