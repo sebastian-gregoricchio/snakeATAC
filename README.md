@@ -59,7 +59,7 @@ Notice that the absence of errors does not mean that the pipeline will run witho
 Explain the rules  + workflow
 
 
-![snakeATAC workflow](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/snakeATAC_workflow.svg)
+![snakeATAC workflow](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/snakeATAC_workflow.png)
 
 
 
