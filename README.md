@@ -6,7 +6,7 @@
 ![visits](https://badges.pufler.dev/visits/sebastian-gregoricchio/snakeATAC)
 ![downloads](https://img.shields.io/github/downloads/sebastian-gregoricchio/Rseb/total.svg)--->
 
-# snakeATAC <img src="https://sebastian-gregoricchio.github.io/snakeATAC/resources/snakeATAC_logo.svg" align="right" height = 150/>
+# snakeATAC [<img src="https://sebastian-gregoricchio.github.io/snakeATAC/snakeATAC_logo.svg" align="right" height = 150/>](https://sebastian-gregoricchio.github.io/snakeATAC)
 ## Introduction
 `SnakeATAC` is a snakemake based end-to-end pipeline to analyze ATAC-seq data. The input files required to run the pipeline are Paired-End fastq files. The pipeline include data quality check and normalization. It is included also a step of data reads shifting in order to take into account the Tn5 transposome insertion bias. Indeed, reads should be shifted +4bp and −5bp for positive and negative strand respectively, to account for the 9-bp duplication created by DNA repair of the nick by Tn5 transposase and achieve base-pair resolution of TF footprint and motif-related analyses ([Yan F., *et al.*, Genome Biol. 2020](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-020-1929-3)).
 
@@ -18,7 +18,7 @@ If you use this package, please cite:
 <font size="-0.5">
 
 <div style="margin-left:2%; margin-right:2%; text-align: justify">
-*--- No associated publication yet ---*
+*--- No publication associated yet ---*
 </div>
 </font>
 
