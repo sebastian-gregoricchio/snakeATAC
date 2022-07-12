@@ -158,13 +158,13 @@ Hereafter, the meaning of the different parameters is described.
 *Standard normalization and peak calling (without CNV correction)*
 | Parameter   |   Description   |
 |------------:|:----------------|
-|*bigWig_binSize*| Default: `5`. Size, in bp, of the bins used to compute the normalized bigWig files. |
-|*normalization_method*| Default: `"RPGC"`, reads per genomic content (1x normalization). Type of normalization to be used to generated the normalized bigWig files by [deeptools bamCoverage](https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html). |
-|*bamCoverage_threads*| Default: `8`. Number of CPUs to be used by [deeptools bamCoverage](https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html) in order to compute the signal normalization and the bigWig generation. |
-|*genome_size_MACS*| A string or a number indicating the genome size to use by [MACS3](https://github.com/macs3-project/MACS) for the peak calling. Example: `"hs"`. Some values: hs = 2.7e9, mm = 1.87e9, ce = 9e7, dm = 1.2e8. |
-|*FDR_cutoff*| Deafult: `0.01`. False Discovery Ratio (FDR) cutoff used by [MACS3](https://github.com/macs3-project/MACS) to filter the significant peaks. |
-|*call_summits*| Default: `"True"`. Logical value to define whether [MACS3](https://github.com/macs3-project/MACS) should also call the peak summits (position with the highest value). |
-|*FRiP_threshold*| Default `20`. This value will be used to label the FRiP (Fraction of Reads in a Peak) score as "good" or "bad in the summary table for each single sample. A FRiP above the 20% (FRiP = 0.02) is considered a good score for ATAC-seq peaks by the [ENCODE guidelines](https://www.encodeproject.org/atac-seq/). |
+| *bigWig_binSize* | Default: `5`. Size, in bp, of the bins used to compute the normalized bigWig files. |
+| *normalization_method* | Default: `"RPGC"`, reads per genomic content (1x normalization). Type of normalization to be used to generated the normalized bigWig files by [deeptools bamCoverage](https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html). |
+| *bamCoverage_threads* | Default: `8`. Number of CPUs to be used by [deeptools bamCoverage](https://deeptools.readthedocs.io/en/develop/content/tools/bamCoverage.html) in order to compute the signal normalization and the bigWig generation. |
+| *genome_size_MACS* | A string or a number indicating the genome size to use by [MACS3](https://github.com/macs3-project/MACS) for the peak calling. Example: `"hs"`. Some values: hs = 2.7e9, mm = 1.87e9, ce = 9e7, dm = 1.2e8. |
+| *FDR_cutoff* | Deafult: `0.01`. False Discovery Ratio (FDR) cutoff used by [MACS3](https://github.com/macs3-project/MACS) to filter the significant peaks. |
+| *call_summits* | Default: `"True"`. Logical value to define whether [MACS3](https://github.com/macs3-project/MACS) should also call the peak summits (position with the highest value). |
+| *FRiP_threshold* | Default `20`. This value will be used to label the FRiP (Fraction of Reads in a Peak) score as "good" or "bad in the summary table for each single sample. A FRiP above the 20% (FRiP = 0.02) is considered a good score for ATAC-seq peaks by the [ENCODE guidelines](https://www.encodeproject.org/atac-seq/). |
 
 <br/><br/>
 
@@ -309,7 +309,7 @@ This folder contains multiple quality controls, feature counts and sample correl
 
 | Column   |   Description   |
 |------------:|:----------------|
-| Sample | Sample name|
+| Sample | Sample name |
 | Reads_R1 | Number of reads in read.1 fastq file. |
 | Reads_R2 | Number of reads in read.2 fastq file. |
 | Reads_total | Total number of reads (read.1 + read.2). |
