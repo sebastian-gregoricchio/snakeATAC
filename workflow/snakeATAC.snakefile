@@ -84,10 +84,10 @@ else:
 
 # GATK outputs
 if (eval(str(config["call_variants"]))):
-    bsqr_table = ancient(expand(os.path.join(GATKDIR, "{sample}/{sample}_bsqr.table"), sample=SAMPLENAMES))
-    dedup_BAM_bsqr = ancient(expand(os.path.join(GATKDIR, "{sample}/{sample}_bsqr.bam"), sample=SAMPLENAMES))
-    dedup_BAM_bsqr_index = ancient(expand(os.path.join(GATKDIR, "{sample}/{sample}_bsqr.bam.bai"), sample=SAMPLENAMES))
-    vcf = ancient(expand(os.path.join(GATKDIR, "{sample}/{sample}_gatk.vcf.gz"), sample=SAMPLENAMES))
+    bsqr_table = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.table"])), sample=SAMPLENAMES, dup=DUP))
+    dedup_BAM_bsqr = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.bam"])), sample=SAMPLENAMES, dup=DUP))
+    dedup_BAM_bsqr_index = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.bam.bai"])), sample=SAMPLENAMES, dup=DUP))
+    vcf = ancient(expand(os.path.join(GATKDIR, "{sample}/{sample}_{dup}_gatk.vcf.gz"), sample=SAMPLENAMES, dup = DUP))
 else:
     dedup_BAM_bsqr = []
     dedup_BAM_bsqr_index = []
@@ -95,13 +95,13 @@ else:
 
 
 if (eval(str(config["call_SNPs"]))):
-    snp = ancient(expand(os.path.join(GATKDIR, "{sample}/{sample}_gatk-snp.vcf"), sample=SAMPLENAMES))
+    snp = ancient(expand(os.path.join(GATKDIR, "{sample}/{sample}_{dup}_gatk-snp.vcf"), sample=SAMPLENAMES, dup=DUP))
 else:
     snp = []
 
 
 if (eval(str(config["call_indels"]))):
-    indels = ancient(expand(os.path.join(GATKDIR, "{sample}/{sample}_gatk.vcf.gz"), sample=SAMPLENAMES))
+    indels = ancient(expand(os.path.join(GATKDIR, "{sample}/{sample}_{dup}_gatk.vcf.gz"), sample=SAMPLENAMES, dup=DUP))
 else:
     indels = []
 
@@ -1060,7 +1060,7 @@ rule M_all_peaks_file_and_score_matrix:
         concatenation_bed_sorted = temp(os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/temp_all_samples_peaks_concatenation_sorted.bed")),
         concatenation_bed_collapsed = temp(os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/temp_all_samples_peaks_concatenation_collapsed.bed")),
         concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed"),
-        score_matrix_peaks = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/peaks_score_matrix_all_samples_MACS3.npz"),
+        score_matrix_peaks = os.path.join(SUMMARYDIR, ''.join(["Sample_comparisons/Peak_comparison/peaks_score_matrix_all_samples_", PEAKCALLER, ".npz"])),
         score_matrix_peaks_table = os.path.join(SUMMARYDIR, ''.join(["Sample_comparisons/Peak_comparison/peaks_score_matrix_all_samples_table_", PEAKCALLER, ".tsv"]))
     params:
         make_directory = os.path.dirname(''.join([SUMMARYDIR, "Sample_comparisons/Peak_comparison/"])),
@@ -1239,27 +1239,43 @@ rule P_GATK_bam_base_quality_score_recalibration:
         gatk_directory = GATKDIR,
         genome = config["genome_fasta"],
         dbsnp = config["dbsnp_file"],
-        CPUs = config["SAMtools_threads"]
+        CPUs = config["SAMtools_threads"],
+        max_records = config["PICARD_max_records_in_ram"]
     threads:
         config["SAMtools_threads"]
     output:
-        bsqr_table = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_bsqr.table"),
-        dedup_BAM_bsqr = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_bsqr.bam"),
-        dedup_BAM_bsqr_index = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_bsqr.bam.bai")
+        dedup_BAM_withRG = temp(os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_withRG.bam"]))),
+        bsqr_table = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_bsqr.table"])),
+        dedup_BAM_bsqr = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_bsqr.bam"])),
+        dedup_BAM_bsqr_index = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_bsqr.bai"]))
     shell:
         """
+        mkdir -p {params.gatk_directory}{params.sample}/
+
+        printf '\033[1;36m{params.sample}: Adding Read Groups to unshifted bams...\\n\033[0m'
+
+        picard AddOrReplaceReadGroups \
+        I={input.dedup_BAM} \
+        O={output.dedup_BAM_withRG} \
+        RGID=1 \
+        RGLB=lib1 \
+        RGPL=illumina \
+        RGPU=unit1 \
+        RGSM={params.sample} \
+        MAX_RECORDS_IN_RAM={params.max_records}
+
+
         printf '\033[1;36m{params.sample}: Base Quality Score Recalibration of the deduplicated unshifted bam...\\n\033[0m'
-        mkdir -p {params.gatk_directory}{params.sample}
 
         gatk --java-options '-Xmx4G' BaseRecalibrator \
-        --input {input.dedup_BAM} \
+        --input {output.dedup_BAM_withRG} \
         --known-sites {params.dbsnp} \
         --output {output.bsqr_table} \
         --reference {params.genome}
 
         gatk --java-options '-Xmx4G' ApplyBQSR \
         -R {params.genome} \
-        -I {input.dedup_BAM} \
+        -I {output.dedup_BAM_withRG} \
         --bqsr-recal-file {output.bsqr_table} \
         -O {output.dedup_BAM_bsqr}
 
@@ -1273,15 +1289,16 @@ rule P_GATK_bam_base_quality_score_recalibration:
 # run gatk haplotype caller
 rule Q_GATK_haplotype_calling:
     input:
-        concatenation_bed_collapsed_sorted = ancient(os.path.join(SUMMARYDIR, "temp_all_samples_peaks_concatenation_collapsed_sorted.bed")),
-        dedup_BAM_bsqr = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_bsqr.bam")),
-        dedup_BAM_bsqr_index = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_bsqr.bam.bai"))
+        concatenation_bed_collapsed_sorted = ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")),
+        dedup_BAM_bsqr = ancient(os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_bsqr.bam"]))),
+        dedup_BAM_bsqr_index = ancient(os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_bsqr.bai"])))
     params:
         genome = config["genome_fasta"],
         sample = "{SAMPLES}",
         to_copy_bed = os.path.join(GATKDIR, "all_samples_peaks_concatenation_collapsed_sorted.bed")
     output:
-        gvcf = temp(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_gatk.g.vcf.gz"))
+        gvcf = temp(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.g.vcf.gz")),
+        gvcf_idx = temp(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.g.vcf.gz.tbi"))
     shell:
         """
         cp {input.concatenation_bed_collapsed_sorted} {params.to_copy_bed}
@@ -1305,13 +1322,14 @@ rule Q_GATK_haplotype_calling:
 # correct the genotypes that come out of haplotype caller
 rule R_GATK_haplotype_calling_correction:
     input:
-        concatenation_bed_collapsed_sorted = ancient(os.path.join(SUMMARYDIR, "temp_all_samples_peaks_concatenation_collapsed_sorted.bed")),
-        gvcf = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_gatk.g.vcf.gz"))
+        concatenation_bed_collapsed_sorted = ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")),
+        gvcf = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.g.vcf.gz")),
+        gvcf_idx = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.g.vcf.gz.tbi"))
     params:
         sample = "{SAMPLES}",
         genome = config["genome_fasta"]
     output:
-        vcf = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_gatk.vcf.gz")
+        vcf = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.vcf.gz")
     shell:
         """
         printf '\033[1;36m{params.sample}: GATK Haplotype call correction...\\n\033[0m'
@@ -1330,13 +1348,13 @@ rule R_GATK_haplotype_calling_correction:
 # Select SNPs
 rule S_GATK_call_SNPs:
     input:
-        concatenation_bed_collapsed_sorted = ancient(os.path.join(SUMMARYDIR, "temp_all_samples_peaks_concatenation_collapsed_sorted.bed")),
-        vcf = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_gatk.vcf.gz"))
+        concatenation_bed_collapsed_sorted = ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")),
+        vcf = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.vcf.gz"))
     params:
         sample = "{SAMPLES}",
         genome = config["genome_fasta"]
     output:
-        snp = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_gatk-snp.vcf")
+        snp = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp.vcf")
     shell:
         """
         printf '\033[1;36m{params.sample}: GATK SNP calling...\\n\033[0m'
@@ -1360,13 +1378,13 @@ rule S_GATK_call_SNPs:
 # Call indels
 rule T_GATK_call_indels:
     input:
-        concatenation_bed_collapsed_sorted = ancient(os.path.join(SUMMARYDIR, "temp_all_samples_peaks_concatenation_collapsed_sorted.bed")),
-        vcf = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_gatk.vcf.gz"))
+        concatenation_bed_collapsed_sorted = ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")),
+        vcf = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.vcf.gz"))
     params:
         sample = "{SAMPLES}",
         genome = config["genome_fasta"]
     output:
-        indels = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_gatk-indel.vcf")
+        indels = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel.vcf")
     shell:
         """
         printf '\033[1;36m{params.sample}: GATK Indel calling...\\n\033[0m'
