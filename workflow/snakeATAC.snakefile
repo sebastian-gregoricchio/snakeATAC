@@ -86,7 +86,7 @@ else:
 if (eval(str(config["call_variants"]))):
     bsqr_table = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.table"])), sample=SAMPLENAMES, dup=DUP))
     dedup_BAM_bsqr = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.bam"])), sample=SAMPLENAMES, dup=DUP))
-    dedup_BAM_bsqr_index = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.bam.bai"])), sample=SAMPLENAMES, dup=DUP))
+    dedup_BAM_bsqr_index = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.bai"])), sample=SAMPLENAMES, dup=DUP))
     vcf = ancient(expand(os.path.join(GATKDIR, "{sample}/{sample}_{dup}_gatk.vcf.gz"), sample=SAMPLENAMES, dup = DUP))
 else:
     dedup_BAM_bsqr = []
@@ -101,7 +101,7 @@ else:
 
 
 if (eval(str(config["call_indels"]))):
-    indels = ancient(expand(os.path.join(GATKDIR, "{sample}/{sample}_{dup}_gatk.vcf.gz"), sample=SAMPLENAMES, dup=DUP))
+    indels = ancient(expand(os.path.join(GATKDIR, "{sample}/{sample}_{dup}_gatk-indel.vcf"), sample=SAMPLENAMES, dup=DUP))
 else:
     indels = []
 
