@@ -334,7 +334,8 @@ An optimal fragment size distribution should be included within a range of 50-80
 
 
 ### 04_Normalization
-Shifted signal is normalized on sequencing depth library upon copy number variation correction by [HMCan](https://academic.oup.com/bioinformatics/article/29/23/2979/246862?login=false) (if required by the user). The bin size used is indicated in the file name (suffix: bs#).
+Shifted signal is normalized on sequencing depth library upon copy number variation correction by [HMCan](https://academic.oup.com/bioinformatics/article/29/23/2979/246862?login=false) (if requested by the user). The bin size used is indicated in the resulting bigWig file name (suffix: bs#). <br>
+However, these bigWig files can be normalized more precisely normalized in the case that you dispone of a corresponding RNA-seq data set using [CHIPIN](https://doi.org/10.1186/s12859-021-04320-3) (L. Polit *et.al*, BMC Bioinformatics, 2021). Examples of CHIPIN usage can be found at [S. Gregoricchio *et al.*, Nucleic Acids Research (2022)](https://doi.org/10.1093/nar/gkac613).
 
 <br/><br/>
 
