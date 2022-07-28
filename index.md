@@ -6,7 +6,7 @@
 ![visits](https://badges.pufler.dev/visits/sebastian-gregoricchio/snakeATAC)
 ![downloads](https://img.shields.io/github/downloads/sebastian-gregoricchio/Rseb/total.svg)--->
 
-# snakeATAC <!-- omit in toc -->
+<h1> snakeATAC </h1>
 
 -------------------------
 
