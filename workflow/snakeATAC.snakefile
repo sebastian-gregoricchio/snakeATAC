@@ -1422,7 +1422,7 @@ rule S3_GATK_vcf2txt_SNPs:
         -s "," \
         -e "." \
         {input.filtered_snp_vcf_gz} \
-        {params.fileds} > {output.filtered_snp_tb}
+        {params.fileds} > {output.filtered_snp_allGT_tb}
 
         grep -v '0/0' {output.filtered_snp_allGT_tb} > {output.filtered_snp_tb}
         """
