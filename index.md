@@ -6,7 +6,7 @@
 ![visits](https://badges.pufler.dev/visits/sebastian-gregoricchio/snakeATAC)
 ![downloads](https://img.shields.io/github/downloads/sebastian-gregoricchio/Rseb/total.svg)--->
 
-* TOC {:toc}
+* TOC <newline> {:toc}
 
 # snakeATAC [<img src="https://raw.githubusercontent.com/sebastian-gregoricchio/snakeATAC/main/resources/snakeATAC_logo.svg" align="right" height = 150/>](https://sebastian-gregoricchio.github.io/snakeATAC)
 ## Introduction
