@@ -95,10 +95,10 @@ Hereafter, the meaning of the different parameters is described.
 |*perform_HMCan_correction*| Default `"False"`. If set to `"True"` the signal will be corrected for the presence of CNVs (Copy Number Variations) and the peak calling will be performed by [HMCan](https://academic.oup.com/bioinformatics/article/29/23/2979/246862?login=false). This correction could be useful in the case of heterogeneous cancer samples. Instead, if set to `"False"`, the CNVs correction is skipped and the peak calling performed by MACS3. **The CNV correction implementation is still in beta-testing phase.**
 |*effective_genomeSize*| Effective genome size used to normalize the ATAC-seq signal; e.g. for Hg38: `2900338458`. A table for the most common genome assemblies is available in this repository at [snakeATAC/resources/chromosome_sizes_for_normalization.yaml](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/chromosomes_sizes_for_normalization.yaml). |
 |*ignore_for_normalization*| A string of space separated chromosome names that should be excluded for ATAC-seq signal normalization, e.g. `"X Y MT M KI270728.1"`.  A table for the most common genome assemblies is available in this repository at [snakeATAC/resources/chromosome_sizes_for_normalization.yaml](https://github.com/sebastian-gregoricchio/snakeATAC/blob/main/resources/chromosomes_sizes_for_normalization.yaml). |
-|*call_variants*| If `true`, variant calling by [GATK4](https://gatk.broadinstitute.org/hc/en-us) will be performed. **Variant calling is still in beta-test phase.** |
-|*call_SNPs*| If `true`, Single Nucleotide Variation (SNP) calling by [GATK4](https://gatk.broadinstitute.org/hc/en-us) will be performed. **Variant calling is still in beta-test phase.** |
-|*call_indels*| If `true`, Insertion/Deletion (indel) calling by [GATK4](https://gatk.broadinstitute.org/hc/en-us) will be performed. **Variant calling is still in beta-test phase.** |
-|*dbsnp_file*| SNP database file (.dbsnp) for base recalibration required by [GATK4](https://gatk.broadinstitute.org/hc/en-us). It could happen that your .bam files contain the 'chr' prefix in the chromosome names while your dbSNP file does not (or viceversa). This can be fixed in the .dbsnp file with the [`bcftools annotate --rename-chrs`](http://samtools.github.io/bcftools/bcftools.html#annotate) command. For Hg38, for istance, the dbSNP file can be downloaded from the [broad institute cloud storage](https://console.cloud.google.com/storage/browser/genomics-public-data/resources/broad/hg38/v0/). Do not forget to download the INDEX as well! |
+|*call_variants*| If `true`, variant calling by [GATK4](https://gatk.broadinstitute.org/hc/en-us) will be performed. |
+|*call_SNPs*| If `true`, Single Nucleotide Variation (SNP) calling by [GATK4](https://gatk.broadinstitute.org/hc/en-us) will be performed. |
+|*call_indels*| If `true`, Insertion/Deletion (indel) calling by [GATK4](https://gatk.broadinstitute.org/hc/en-us) will be performed. |
+|*dbsnp_file*| SNP database file (.dbsnp) for base recalibration required by [GATK4](https://gatk.broadinstitute.org/hc/en-us). It could happen that your .bam files contain the 'chr' prefix in the chromosome names while your dbSNP file does not (or vice versa). This can be fixed in the .dbsnp file with the [`bcftools annotate --rename-chrs`](http://samtools.github.io/bcftools/bcftools.html#annotate) command. For Hg38, for instance, the dbSNP file can be downloaded from the [broad institute cloud storage](https://console.cloud.google.com/storage/browser/genomics-public-data/resources/broad/hg38/v0/). Do not forget to download the INDEX as well! |
 
 <br/><br/>
 
@@ -293,7 +293,7 @@ The structure of the *output_folder* is the following:
 |
 └── <b>07_Variant_calling</b>
     ├── all_samples_peaks_concatenation_collapsed_sorted.bed
-    └── <b><em>sample</em><b>
+    └── <b><em>sample</em></b>
         ├── all_samples_peaks_concatenation_collapsed_sorted.bed
         ├── <em>sample</em>_dedup_gatk.g.vcf.gz.tbi
         ├── <em>sample</em>_dedup_gatk-indel_filtered.DP20.QUAL20.txt
