@@ -95,13 +95,13 @@ else:
 
 
 if (eval(str(config["call_SNPs"]))):
-    snp = ancient(expand(os.path.join(GATKDIR, "{sample}/{sample}_{dup}_gatk-snp.vcf"), sample=SAMPLENAMES, dup=DUP))
+    snp = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_{dup}_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".txt"])), sample=SAMPLENAMES, dup=DUP))
 else:
     snp = []
 
 
 if (eval(str(config["call_indels"]))):
-    indels = ancient(expand(os.path.join(GATKDIR, "{sample}/{sample}_{dup}_gatk-indel.vcf"), sample=SAMPLENAMES, dup=DUP))
+    indels = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_{dup}_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".txt"])), sample=SAMPLENAMES, dup=DUP))
 else:
     indels = []
 
@@ -1345,8 +1345,8 @@ rule R_GATK_haplotype_calling_correction:
 
 
 # ----------------------------------------------------------------------------------------
-# Select SNPs
-rule S_GATK_call_SNPs:
+# Call SNPs
+rule S1_GATK_call_SNPs:
     input:
         concatenation_bed_collapsed_sorted = ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")),
         vcf = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.vcf.gz"))
@@ -1354,7 +1354,9 @@ rule S_GATK_call_SNPs:
         sample = "{SAMPLES}",
         genome = config["genome_fasta"]
     output:
-        snp = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp.vcf")
+        snp = temp(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp.vcf")),
+        snp_idx = temp(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp.vcf.idx"))
+    threads: 4
     shell:
         """
         printf '\033[1;36m{params.sample}: GATK SNP calling...\\n\033[0m'
@@ -1375,8 +1377,63 @@ rule S_GATK_call_SNPs:
 
 
 # ----------------------------------------------------------------------------------------
+# Filter SNPs
+rule S2_GATK_filter_SNPs:
+    input:
+        snp_vcf = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp.vcf"))
+    params:
+        sample = "{SAMPLES}",
+        DP_snp_threshold = config["DP_snp_threshold"],
+        QUAL_snp_threshold = config["QUAL_snp_threshold"],
+        bgzip_threads = config["bgzip_threads"]
+    output:
+        filtered_snp_vcf = temp(os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".vcf"]))),
+        filtered_snp_vcf_gz = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".vcf.gz"])),
+        filtered_snp_vcf_gz_idx = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".vcf.gz.tbi"]))
+    shell:
+        """
+        printf '\033[1;36m{params.sample}: SnpSift SNP filtering...\\n\033[0m'
+        SnpSift filter '( DP > {params.DP_snp_threshold} & ( QUAL > {params.QUAL_snp_threshold} ))' {input.snp_vcf} > {output.filtered_snp_vcf}
+
+        printf '\033[1;36m{params.sample}: Filtered SNP vcf bgzipping...\\n\033[0m'
+        bgzip -@ {params.bgzip_threads} -c {output.filtered_snp_vcf} > {output.filtered_snp_vcf_gz}
+        bcftools index -t {output.filtered_snp_vcf_gz}
+        """
+# ----------------------------------------------------------------------------------------
+
+
+
+# ----------------------------------------------------------------------------------------
+# Filter SNPs
+rule S3_GATK_vcf2txt_SNPs:
+    input:
+        filtered_snp_vcf_gz = ancient(os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".vcf.gz"])))
+    params:
+        sample = "{SAMPLES}",
+        fileds = ''.join(['"', '" "'.join(config["SnpSift_vcf_fields_to_extract"]), '"'])
+    output:
+        filtered_snp_allGT_tb = temp(os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), "_allGT.txt"]))),
+        filtered_snp_tb = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".txt"]))
+    shell:
+        """
+        printf '\033[1;36m{params.sample}: Filtered SNP export to txt...\\n\033[0m'
+
+        SnpSift extractFields \
+        -s "," \
+        -e "." \
+        {input.filtered_snp_vcf_gz} \
+        {params.fileds} > {output.filtered_snp_tb}
+
+        grep -v '0/0' {output.filtered_snp_allGT_tb} > {output.filtered_snp_tb}
+        """
+# ----------------------------------------------------------------------------------------
+
+
+
+
+# ----------------------------------------------------------------------------------------
 # Call indels
-rule T_GATK_call_indels:
+rule T1_GATK_call_indels:
     input:
         concatenation_bed_collapsed_sorted = ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")),
         vcf = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.vcf.gz"))
@@ -1384,7 +1441,9 @@ rule T_GATK_call_indels:
         sample = "{SAMPLES}",
         genome = config["genome_fasta"]
     output:
-        indels = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel.vcf")
+        indels = temp(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel.vcf")),
+        indels_idx = temp(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel.vcf.idx"))
+    threads: 4
     shell:
         """
         printf '\033[1;36m{params.sample}: GATK Indel calling...\\n\033[0m'
@@ -1404,6 +1463,58 @@ rule T_GATK_call_indels:
 # ----------------------------------------------------------------------------------------
 
 
+# ----------------------------------------------------------------------------------------
+# Filter InDels
+rule T2_GATK_filter_indels:
+    input:
+        indel_vcf = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel.vcf"))
+    params:
+        sample = "{SAMPLES}",
+        DP_indel_threshold = config["DP_indel_threshold"],
+        QUAL_indel_threshold = config["QUAL_indel_threshold"],
+        bgzip_threads = config["bgzip_threads"]
+    output:
+        filtered_indel_vcf = temp(os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".vcf"]))),
+        filtered_indel_vcf_gz = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".vcf.gz"])),
+        filtered_indel_vcf_gz_idx = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".vcf.gz.tbi"]))
+    threads: config["bgzip_threads"]
+    shell:
+        """
+        printf '\033[1;36m{params.sample}: SnpSift InDel filtering...\\n\033[0m'
+        SnpSift filter '( (DP > {params.DP_indel_threshold}) & ( QUAL > {params.QUAL_indel_threshold} ))' {input.indel_vcf} > {output.filtered_indel_vcf}
+
+        printf '\033[1;36m{params.sample}: Filtered InDel vcf bgzipping...\\n\033[0m'
+        bgzip -@ {params.bgzip_threads} -c {output.filtered_indel_vcf} > {output.filtered_indel_vcf_gz}
+        bcftools index -t {output.filtered_indel_vcf_gz}
+        """
+# ----------------------------------------------------------------------------------------
+
+
+
+# ----------------------------------------------------------------------------------------
+# Filter SNPs
+rule T3_GATK_vcf2txt_indels:
+    input:
+        filtered_indel_vcf_gz = ancient(os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".vcf.gz"])))
+    params:
+        sample = "{SAMPLES}",
+        fileds = ''.join(['"', '" "'.join(config["SnpSift_vcf_fields_to_extract"]), '"'])
+    output:
+        filtered_indel_allGT_tb = temp(os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), "allGT.txt"]))),
+        filtered_indel_tb = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".txt"]))
+    shell:
+        """
+        printf '\033[1;36m{params.sample}: Filtered InDel export to txt...\\n\033[0m'
+
+        SnpSift extractFields \
+        -s "," \
+        -e "." \
+        {input.filtered_indel_vcf_gz} \
+        {params.fileds} > {output.filtered_indel_allGT_tb}
+
+        grep -v '0/0' {output.filtered_indel_allGT_tb} > {output.filtered_indel_tb}
+        """
+# ----------------------------------------------------------------------------------------
 
 
 
