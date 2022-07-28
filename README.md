@@ -292,7 +292,7 @@ The structure of the *output_folder* is the following:
 |           └── Correlation_scatterplot_on_BigWigs_wholeGenome_spearmanMethod.pdf
 |
 └── <b>07_Variant_calling</b>
-    ├── all_samples_peaks_concatenation_collapsed_sorted
+    ├── all_samples_peaks_concatenation_collapsed_sorted.bed
     └── <b><em>sample</em><b>
         ├── all_samples_peaks_concatenation_collapsed_sorted.bed
         ├── <em>sample</em>_dedup_gatk.g.vcf.gz.tbi
@@ -386,6 +386,14 @@ This folder contains multiple quality controls, feature counts and sample correl
 
 <br/><br/>
 
+
+
+
+### 07_Variant_calling
+...
+
+
+<br/><br/>
 
 -----------------
 ## Package history and releases

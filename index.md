@@ -177,6 +177,31 @@ Hereafter, the meaning of the different parameters is described.
 <br/><br/>
 
 
+*Samples comparison for overall variance estimation*
+
+| **Parameter**   |   **Description**   |
+|------------:|:----------------|
+| *binning_window_size* | Default: `10000` (base-pairs) |
+| *multiBigwigSummary_threads* | Default: `4` |
+| *heatmap_color* | Default: `"Blues"` |
+| *zScore_heatmap_color* | Default: `"seismic"` |
+
+<br/><br/>
+
+*GATK variant calling*
+
+| **Parameter**   |   **Description**   |
+|------------:|:----------------|
+| *bgzip_threads* | Default: `4` |
+| *DP_snp_threshold* | Default: `20` |
+| *QUAL_snp_threshold* | Default: `0` |
+| *DP_indel_threshold* | Default: `20` |
+| *QUAL_indel_threshold* | Default: `0` |
+| *SnpSift_vcf_fields_to_extract* | Default: `[ "CHROM", "POS", "ID", "REF", "ALT", "QUAL", "DP", "FILTER", "FORMAT", "GEN[*].GT", "GEN[*].AD" ]` |
+
+
+<br/><br/>
+
 ## Results
 The structure of the *output_folder* is the following:
 
@@ -241,30 +266,46 @@ The structure of the *output_folder* is the following:
 │   └── <b>log</b>
 │       └── <em>sample</em>_mapQ20_woMT_dedup_shifted_FDR0.01.log
 |
-└── <b>06_Overall_quality_and_info</b>
-    ├── Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf
-    ├── <b>Counts</b>
-    │   ├── counts_summary.txt
-    │   └── <b>subread_featureCounts_output</b>
-    │       └── <b>sample</b>
-    │           ├── <em>sample</em>.readCountInPeaks
-    │           ├── <em>sample</em>.readCountInPeaks.log
-    │           └── <em>sample</em>.readCountInPeaks.summary
-    └── <b>Sample_comparisons</b>
-        ├── multiBigWigSummary_matrix_allSamples.npz
-        ├── PCA_on_BigWigs_wholeGenome.pdf
-        ├── <b>Peak_comparison</b>
-        │   ├── all_samples_peaks_concatenation_collapsed_sorted.bed
-        │   ├── peaks_score_matrix_all_samples_MACS3.npz
-        │   └── peaks_score_matrix_all_samples_table_MACS3.tsv
-        |   └── <b>Heatmaps</b>
-        |       ├── Heatmap_on_log1p.rawScores_for_MACS3.peaks_union_population.pdf
-        │       └── Heatmap_on_zScores_for_MACS3.peaks_union_population.pdf
-        └── <b>Sample_correlation</b>
-            ├── Correlation_heatmap_on_BigWigs_wholeGenome_pearsonMethod.pdf
-            ├── Correlation_heatmap_on_BigWigs_wholeGenome_spearmanMethod.pdf
-            ├── Correlation_scatterplot_on_BigWigs_wholeGenome_pearsonMethod.pdf
-            └── Correlation_scatterplot_on_BigWigs_wholeGenome_spearmanMethod.pdf
+├── <b>06_Overall_quality_and_info</b>
+|   ├── Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf
+|   ├── <b>Counts</b>
+|   │   ├── counts_summary.txt
+|   │   └── <b>subread_featureCounts_output</b>
+|   │       └── <b>sample</b>
+|   │           ├── <em>sample</em>.readCountInPeaks
+|   │           ├── <em>sample</em>.readCountInPeaks.log
+|   │           └── <em>sample</em>.readCountInPeaks.summary
+|   └── <b>Sample_comparisons</b>
+|       ├── multiBigWigSummary_matrix_allSamples.npz
+|       ├── PCA_on_BigWigs_wholeGenome.pdf
+|       ├── <b>Peak_comparison</b>
+|       │   ├── all_samples_peaks_concatenation_collapsed_sorted.bed
+|       │   ├── peaks_score_matrix_all_samples_MACS3.npz
+|       │   └── peaks_score_matrix_all_samples_table_MACS3.tsv
+|       |   └── <b>Heatmaps</b>
+|       |       ├── Heatmap_on_log1p.rawScores_for_MACS3.peaks_union_population.pdf
+|       │       └── Heatmap_on_zScores_for_MACS3.peaks_union_population.pdf
+|       └── <b>Sample_correlation</b>
+|           ├── Correlation_heatmap_on_BigWigs_wholeGenome_pearsonMethod.pdf
+|           ├── Correlation_heatmap_on_BigWigs_wholeGenome_spearmanMethod.pdf
+|           ├── Correlation_scatterplot_on_BigWigs_wholeGenome_pearsonMethod.pdf
+|           └── Correlation_scatterplot_on_BigWigs_wholeGenome_spearmanMethod.pdf
+|
+└── <b>07_Variant_calling</b>
+    ├── all_samples_peaks_concatenation_collapsed_sorted.bed
+    └── <b><em>sample</em><b>
+        ├── all_samples_peaks_concatenation_collapsed_sorted.bed
+        ├── <em>sample</em>_dedup_gatk.g.vcf.gz.tbi
+        ├── <em>sample</em>_dedup_gatk-indel_filtered.DP20.QUAL20.txt
+        ├── <em>sample</em>_dedup_gatk-indel_filtered.DP20.QUAL20.vcf.gz
+        ├── <em>sample</em>_dedup_gatk-indel_filtered.DP20.QUAL20.vcf.gz.tbi
+        ├── <em>sample</em>_dedup_gatk-snp_filtered.DP20.QUAL20.vcf.gz
+        ├── <em>sample</em>_dedup_gatk-snp_filtered.DP20.QUAL20.vcf.gz.tbi
+        ├── <em>sample</em>_dedup_gatk.vcf.gz
+        ├── <em>sample</em>_dedup_gatk.vcf.gz.tbi
+        ├── <em>sample</em>_mapQ20_sorted_woMT_dedup_bsqr.bai
+        ├── <em>sample</em>_mapQ20_sorted_woMT_dedup_bsqr.bam
+        └── <em>sample</em>_mapQ20_sorted_woMT_dedup_bsqr.table
 </pre>
 
 <br/><br/>
@@ -346,6 +387,14 @@ This folder contains multiple quality controls, feature counts and sample correl
 <br/><br/>
 
 
+
+
+### 07_Variant_calling
+...
+
+
+<br/><br/>
+
 -----------------
 ## Package history and releases
 A list of all releases and respective description of changes applied could be found [here](https://sebastian-gregoricchio.github.io/snakeATAC/NEWS).
@@ -356,7 +405,7 @@ For any suggestion, bug fixing, commentary please report it in the [issues](http
 ## License
 This repository is under a [GNU General Public License (version 3)](https://sebastian-gregoricchio.github.io/Rseb/LICENSE.md/LICENSE).
 
-<br />
+<br/>
 
 #### Contributors
 [![contributors](https://badges.pufler.dev/contributors/sebastian-gregoricchio/Rseb?size=50&padding=5&bots=true)](https://sebastian-gregoricchio.github.io/)
