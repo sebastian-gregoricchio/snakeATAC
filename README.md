@@ -9,7 +9,7 @@
 # snakeATAC [<img src="https://raw.githubusercontent.com/sebastian-gregoricchio/snakeATAC/main/resources/snakeATAC_logo.svg" align="right" height = 150/>](https://sebastian-gregoricchio.github.io/snakeATAC)
 
 
-{:toc}
+* TOC {:toc}
 
 <br/><br/>
 
