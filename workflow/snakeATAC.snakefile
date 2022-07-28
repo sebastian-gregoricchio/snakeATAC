@@ -83,7 +83,7 @@ else:
 
 
 # GATK outputs
-if (eval(str(config["call_variants"]))):
+if (eval(str(config["call_variants"])) | eval(str(config["call_SNPs"])) | eval(str(config["call_indels"]))):
     bsqr_table = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.table"])), sample=SAMPLENAMES, dup=DUP))
     dedup_BAM_bsqr = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.bam"])), sample=SAMPLENAMES, dup=DUP))
     dedup_BAM_bsqr_index = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.bai"])), sample=SAMPLENAMES, dup=DUP))
