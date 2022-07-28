@@ -3,20 +3,21 @@ channels:
   - bioconda
   - conda-forge
 dependencies:
-  - snakemake ==3.13.3
-  - bioconda::bedtools ==2.30.0
+  - snakemake >=3.13.3
+  - bioconda::bedtools >=2.30.0
   - bioconda::bcftools >=1.9
   - bioconda::bwa ==0.7.17
-  - bioconda::deeptools ==3.5.1
-  - bioconda::fastqc ==0.11.9
+  - bioconda::deeptools >=3.5.1
+  - bioconda::fastqc >=0.11.9
   - bioconda::gatk4 >=4.2.5.0
-  - bioconda::picard ==2.26.6
-  - bioconda::samtools ==1.7
-  - bioconda::subread ==2.0.1
-  - bioconda::ucsc-bedgraphtobigwig ==377
-  - conda-forge::pdfcombine ==1.1.4
-  - conda-forge::python ==3.6.13
-  - conda-forge::r-base ==4.0.3
+  - bioconda::picard >=2.26.6
+  - bioconda::samtools >=1.7
+  - bioconda::snpsift
+  - bioconda::subread >=2.0.1
+  - bioconda::ucsc-bedgraphtobigwig >=377
+  - conda-forge::pdfcombine >=1.1.4
+  - conda-forge::python >=3.6.13
+  - conda-forge::r-base >=4.0.3
   - pip
   - pip:
         - bioinfokit==2.0.8
