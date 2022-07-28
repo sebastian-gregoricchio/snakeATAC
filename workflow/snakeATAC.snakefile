@@ -84,10 +84,10 @@ else:
 
 # GATK outputs
 if (eval(str(config["call_variants"])) | eval(str(config["call_SNPs"])) | eval(str(config["call_indels"]))):
-    bsqr_table = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.table"])), sample=SAMPLENAMES, dup=DUP))
-    dedup_BAM_bsqr = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.bam"])), sample=SAMPLENAMES, dup=DUP))
-    dedup_BAM_bsqr_index = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.bai"])), sample=SAMPLENAMES, dup=DUP))
-    vcf = ancient(expand(os.path.join(GATKDIR, "{sample}/{sample}_{dup}_gatk.vcf.gz"), sample=SAMPLENAMES, dup = DUP))
+    bsqr_table = expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.table"])), sample=SAMPLENAMES, dup=DUP)
+    dedup_BAM_bsqr = expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.bam"])), sample=SAMPLENAMES, dup=DUP)
+    dedup_BAM_bsqr_index = expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.bai"])), sample=SAMPLENAMES, dup=DUP)
+    vcf = expand(os.path.join(GATKDIR, "{sample}/{sample}_{dup}_gatk.vcf.gz"), sample=SAMPLENAMES, dup = DUP)
 else:
     dedup_BAM_bsqr = []
     dedup_BAM_bsqr_index = []
@@ -95,24 +95,24 @@ else:
 
 
 if (eval(str(config["call_SNPs"]))):
-    snp = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_{dup}_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".txt"])), sample=SAMPLENAMES, dup=DUP))
+    snp = expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_{dup}_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".txt"])), sample=SAMPLENAMES, dup=DUP)
 else:
     snp = []
 
 
 if (eval(str(config["call_indels"]))):
-    indels = ancient(expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_{dup}_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".txt"])), sample=SAMPLENAMES, dup=DUP))
+    indels = expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_{dup}_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".txt"])), sample=SAMPLENAMES, dup=DUP)
 else:
     indels = []
 
 
 correlation_outputs = []
 if (len(SAMPLENAMES) > 1):
-    correlation_outputs.append(ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/PCA_on_BigWigs_wholeGenome.pdf"))) # PCA
-    correlation_outputs.append(ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/Correlation_heatmap_on_BigWigs_wholeGenome_spearmanMethod.pdf"))) # heatamap_spearman
-    correlation_outputs.append(ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/Correlation_heatmap_on_BigWigs_wholeGenome_pearsonMethod.pdf"))) # hetamap_pearson
-    correlation_outputs.append(ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/Correlation_scatterplot_on_BigWigs_wholeGenome_spearmanMethod.pdf"))) # scatterplot_spearman
-    correlation_outputs.append(ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/Correlation_scatterplot_on_BigWigs_wholeGenome_pearsonMethod.pdf"))) # scatterplot_pearson
+    correlation_outputs.append(os.path.join(SUMMARYDIR, "Sample_comparisons/PCA_on_BigWigs_wholeGenome.pdf")) # PCA
+    correlation_outputs.append(os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/Correlation_heatmap_on_BigWigs_wholeGenome_spearmanMethod.pdf")) # heatamap_spearman
+    correlation_outputs.append(os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/Correlation_heatmap_on_BigWigs_wholeGenome_pearsonMethod.pdf")) # hetamap_pearson
+    correlation_outputs.append(os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/Correlation_scatterplot_on_BigWigs_wholeGenome_spearmanMethod.pdf")) # scatterplot_spearman
+    correlation_outputs.append(os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/Correlation_scatterplot_on_BigWigs_wholeGenome_pearsonMethod.pdf")) # scatterplot_pearson
 
 
 # ========================================================================================
@@ -126,36 +126,36 @@ if (len(SAMPLENAMES) > 1):
 rule AAA_initialization:
     input:
         # Rule A
-        fastQC_raw_zip = ancient(expand(os.path.join("01_fastQC_raw", "{run}_fastqc.zip"), run=RUNNAMES)),
+        fastQC_raw_zip = expand(os.path.join("01_fastQC_raw", "{run}_fastqc.zip"), run=RUNNAMES),
 
         # Rule B
-        multiQC_raw_html = ancient("01_fastQC_raw/multiQC_raw/multiQC_report_fastqRaw.html"),
+        multiQC_raw_html = "01_fastQC_raw/multiQC_raw/multiQC_report_fastqRaw.html",
 
         # Rule C
-        #SAM = ancient(expand(os.path.join("01b_SAM_tempFolder/", "{sample}.sam"), sample=SAMPLENAMES)),
+        #SAM = expand(os.path.join("01b_SAM_tempFolder/", "{sample}.sam"), sample=SAMPLENAMES)),
 
         # Rule D
-        filtBAM_sorted_woMT = ancient(expand(os.path.join("02_BAM/", "{sample}_mapQ{MAPQ}_sorted_woMT.bam"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"]))),
-        filtBAM_sorted_woMT_index = ancient(expand(os.path.join("02_BAM/", "{sample}_mapQ{MAPQ}_sorted_woMT.bam.bai"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"]))),
-        flagstat_unfiltered_BAM = ancient(expand(os.path.join("02_BAM/flagstat/", "{sample}_flagstat_UNfiltered_bam.txt"), sample=SAMPLENAMES)),
-        flagstat_on_filtered_woMT_BAM = ancient(expand(os.path.join("02_BAM/flagstat/", "{sample}_flagstat_filtered_bam_woMT.txt"), sample=SAMPLENAMES)),
+        filtBAM_sorted_woMT = expand(os.path.join("02_BAM/", "{sample}_mapQ{MAPQ}_sorted_woMT.bam"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"])),
+        filtBAM_sorted_woMT_index = expand(os.path.join("02_BAM/", "{sample}_mapQ{MAPQ}_sorted_woMT.bam.bai"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"])),
+        flagstat_unfiltered_BAM = expand(os.path.join("02_BAM/flagstat/", "{sample}_flagstat_UNfiltered_bam.txt"), sample=SAMPLENAMES),
+        flagstat_on_filtered_woMT_BAM = expand(os.path.join("02_BAM/flagstat/", "{sample}_flagstat_filtered_bam_woMT.txt"), sample=SAMPLENAMES),
 
         # Rule E
-        # dedup_BAM = ancient(expand(os.path.join("03_BAM_{DUP}/unshifted_bams/", "{sample}_mapQ{MAPQ}_sorted_woMT_{DUP}.bam"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"]))),
-        # dedup_BAM_index = ancient(expand(os.path.join("03_BAM_{DUP}/unshifted_bams/", "{sample}_mapQ{MAPQ}_sorted_woMT_{DUP}.bai"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"]))),
-        # dedup_BAM_metrics = ancient(expand(os.path.join("03_BAM_{DUP}/metrics", "{sample}_metrics_woMT_{DUP}_bam.txt"), sample=SAMPLENAMES)),
-        # dedup_BAM_flagstat = ancient(expand(os.path.join("03_BAM_{DUP}/flagstat/", "{sample}_flagstat_filtered_bam_woMT_{DUP}.txt"), sample=SAMPLENAMES)),
+        # dedup_BAM = expand(os.path.join("03_BAM_{DUP}/unshifted_bams/", "{sample}_mapQ{MAPQ}_sorted_woMT_{DUP}.bam"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"])),
+        # dedup_BAM_index = expand(os.path.join("03_BAM_{DUP}/unshifted_bams/", "{sample}_mapQ{MAPQ}_sorted_woMT_{DUP}.bai"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"])),
+        # dedup_BAM_metrics = expand(os.path.join("03_BAM_{DUP}/metrics", "{sample}_metrics_woMT_{DUP}_bam.txt"), sample=SAMPLENAMES),
+        # dedup_BAM_flagstat = expand(os.path.join("03_BAM_{DUP}/flagstat/", "{sample}_flagstat_filtered_bam_woMT_{DUP}.txt"), sample=SAMPLENAMES),
 
         # Rule F
-        dedup_BAM_shifted_sorted = ancient(expand(os.path.join("03_BAM_{dup}/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_sorted.bam"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"]))),
-        dedup_BAM_shifted_sorted_index = ancient(expand(os.path.join("03_BAM_{dup}/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_sorted.bam.bai"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"]))),
-        dedup_BAM_flagstat_shifted_sorted = ancient(expand(os.path.join("03_BAM_{dup}/flagstat/", "{sample}_flagstat_woMT_{dup}_shifted_sorted.txt"), dup=DUP, sample=SAMPLENAMES)),
+        dedup_BAM_shifted_sorted = expand(os.path.join("03_BAM_{dup}/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_sorted.bam"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"])),
+        dedup_BAM_shifted_sorted_index = expand(os.path.join("03_BAM_{dup}/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_sorted.bam.bai"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"])),
+        dedup_BAM_flagstat_shifted_sorted = expand(os.path.join("03_BAM_{dup}/flagstat/", "{sample}_flagstat_woMT_{dup}_shifted_sorted.txt"), dup=DUP, sample=SAMPLENAMES),
 
         # Rule G
-        fastQC_zip_BAM = ancient(expand(os.path.join("03_BAM_{dup}/fastQC/", "{sample}_mapQ{MAPQ}_sorted_woMT_{dup}_fastqc.zip"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"]))),
+        fastQC_zip_BAM = expand(os.path.join("03_BAM_{dup}/fastQC/", "{sample}_mapQ{MAPQ}_sorted_woMT_{dup}_fastqc.zip"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"])),
 
         # Rule H
-        multiQC_BAM_html = ancient(expand("03_BAM_{dup}/fastQC/multiQC_{dup}_bams/multiQC_report_BAMs_{dup}.html", dup=DUP)),
+        multiQC_BAM_html = expand("03_BAM_{dup}/fastQC/multiQC_{dup}_bams/multiQC_report_BAMs_{dup}.html", dup=DUP),
 
         # Rule I
         fragmentSizePlot = expand(os.path.join("03_BAM_{dup}/fragmentSizeDistribution_plots/", "{sample}_fragment_size_distribution.pdf"), sample=SAMPLENAMES, dup=DUP),
@@ -165,22 +165,22 @@ rule AAA_initialization:
         #scalingFactors_txt_result = "04_Normalization/scalingFactor/scalingFactor_results.txt",
 
         # Rule_normalization
-        norm_bw = ancient(expand(os.path.join("04_Normalization/normalized_bigWigs/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_normalized_bs{binSize}.bw"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"]), binSize=str(BINS))),
+        norm_bw = expand(os.path.join("04_Normalization/normalized_bigWigs/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_normalized_bs{binSize}.bw"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"]), binSize=str(BINS)),
 
         # Rule peakCalling
         norm_outputs = norm_outputs,
 
         # Rule counts_summary
-        #temp_file_counts = ancient(expand(os.path.join(SUMMARYDIR, "{sample}_counts_summary.temp"), sample=SAMPLENAMES)),
+        #temp_file_counts = expand(os.path.join(SUMMARYDIR, "{sample}_counts_summary.temp"), sample=SAMPLENAMES),
         summary_file = os.path.join(SUMMARYDIR, "Counts/counts_summary.txt"),
-        summary_file_temp = os.path.join(SUMMARYDIR, "Counts/summary_file.temp"),
+        #summary_file_temp = os.path.join(SUMMARYDIR, "Counts/summary_file.temp"),
 
         # Rules L PCA, plotCorrelation, LorenzCurve
         correlation_outputs = correlation_outputs,
         lorenz_plot = os.path.join(SUMMARYDIR, "Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf"),
 
         # Rule Heatmap zScores peaks
-        rawScores_hetamap_MACS3 = ancient(os.path.join(SUMMARYDIR, ''.join(["Sample_comparisons/Peak_comparison/Heatmaps/Heatmap_on_log1p.rawScores_for_", PEAKCALLER, ".peaks_union_population.pdf"]))),
+        rawScores_hetamap_MACS3 = os.path.join(SUMMARYDIR, ''.join(["Sample_comparisons/Peak_comparison/Heatmaps/Heatmap_on_log1p.rawScores_for_", PEAKCALLER, ".peaks_union_population.pdf"])),
 
         # Rules gatk variant calling
         dedup_BAM_bsqr = dedup_BAM_bsqr,
@@ -224,7 +224,7 @@ rule AAA_initialization:
 # Perform the FastQC on raw fastq.gz
 rule A_fastQC_raw:
     input:
-        fastq_gz = ancient(os.path.join(config["runs_directory"], "".join(["{RUNS}", config['fastq_extension']])))
+        fastq_gz = os.path.join(config["runs_directory"], "".join(["{RUNS}", config['fastq_extension']]))
     output:
         html = os.path.join("01_fastQC_raw","{RUNS}_fastqc.html"),
         zip =  os.path.join("01_fastQC_raw","{RUNS}_fastqc.zip")
@@ -249,7 +249,7 @@ rule A_fastQC_raw:
 # Perform multiQC for raw fastq reports
 rule B_multiQC_raw:
     input:
-        fastqc_zip = ancient(expand(os.path.join("01_fastQC_raw", "{run}_fastqc.zip"), run=RUNNAMES))
+        fastqc_zip = expand(os.path.join("01_fastQC_raw", "{run}_fastqc.zip"), run=RUNNAMES)
     output:
         multiqcReportRaw = "01_fastQC_raw/multiQC_raw/multiQC_report_fastqRaw.html"
     params:
@@ -289,9 +289,9 @@ if not os.path.exists("".join([config["genome_fasta"], ".fai"])):
 # Reads alignement
 rule C_bwa_align:
     input:
-        multiqcReportRaw = ancient("01_fastQC_raw/multiQC_raw/multiQC_report_fastqRaw.html"),
-        R1 = ancient(os.path.join(config["runs_directory"], "".join(["{SAMPLES}", config['runs_suffix'][0], config['fastq_extension']]))),
-        R2 = ancient(os.path.join(config["runs_directory"], "".join(["{SAMPLES}", config['runs_suffix'][1], config['fastq_extension']]))),
+        #multiqcReportRaw = ancient("01_fastQC_raw/multiQC_raw/multiQC_report_fastqRaw.html"),
+        R1 = os.path.join(config["runs_directory"], "".join(["{SAMPLES}", config['runs_suffix'][0], config['fastq_extension']])),
+        R2 = os.path.join(config["runs_directory"], "".join(["{SAMPLES}", config['runs_suffix'][1], config['fastq_extension']])),
         genome_fai = "".join([config["genome_fasta"], ".fai"])
     output:
         SAM = os.path.join("01b_SAM_tempFolder/", "{SAMPLES}.sam")
@@ -317,7 +317,7 @@ rule C_bwa_align:
 # SAM filtering for mapping quality and BAM generation | BAM MT-reads removal
 rule D_sam_to_bam:
     input:
-        SAM = ancient(os.path.join("01b_SAM_tempFolder/", "{SAMPLES}.sam"))
+        SAM = os.path.join("01b_SAM_tempFolder/", "{SAMPLES}.sam")
     output:
         #filtBAM_toFix = temp(os.path.join("02_BAM/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_toFix.bam"]))),
         filtBAM = temp(os.path.join("02_BAM/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), ".bam"]))),
@@ -366,7 +366,7 @@ rule D_sam_to_bam:
 # BAM duplicates removal and relative flagstat | BAM reads shifting
 rule E_bam_deduplication:
     input:
-        BAM = ancient(os.path.join("02_BAM/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT.bam"])))
+        BAM = os.path.join("02_BAM/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT.bam"]))
     output:
         dedup_BAM = os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bam"])),
         dedup_BAM_index = os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bai"])),
@@ -415,8 +415,8 @@ rule E_bam_deduplication:
 # BAM reads shifting
 rule F_bam_shifting:
     input:
-        dedup_BAM = ancient(os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bam"]))),
-        dedup_BAM_index = ancient(os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bai"])))
+        dedup_BAM = os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bam"])),
+        dedup_BAM_index = os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bai"]))
     output:
         dedup_BAM_shifted_toSort = temp(os.path.join("03_BAM_{DUP}/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_shifted.ToSort.bam"]))),
         dedup_BAM_shifted_sorted = os.path.join("03_BAM_{DUP}/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_sorted.bam"])),
@@ -450,8 +450,8 @@ rule F_bam_shifting:
 # FastQC on BAMs
 rule G_fastQC_BAMs:
     input:
-        dedup_BAM = ancient(os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bam"]))),
-        dedup_BAM_index = ancient(os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bai"])))
+        dedup_BAM = os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bam"])),
+        dedup_BAM_index = os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bai"]))
     output:
         html = os.path.join("03_BAM_{DUP}/fastQC/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_fastqc.html"])),
         zip = os.path.join("03_BAM_{DUP}/fastQC/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_fastqc.zip"]))
@@ -473,7 +473,7 @@ rule G_fastQC_BAMs:
 # Perform multiQC for BAMs
 rule H_multiQC_BAMs:
     input:
-        BAM_fastqc_zip = ancient(expand(os.path.join("03_BAM_{dup}/fastQC/", "{sample}_mapQ{MAPQ}_sorted_woMT_{dup}_fastqc.zip"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"])))
+        BAM_fastqc_zip = expand(os.path.join("03_BAM_{dup}/fastQC/", "{sample}_mapQ{MAPQ}_sorted_woMT_{dup}_fastqc.zip"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"]))
     output:
         multiqcReportBAM = "03_BAM_{DUP}/fastQC/multiQC_{DUP}_bams/multiQC_report_BAMs_{DUP}.html"
     params:
@@ -491,9 +491,9 @@ rule H_multiQC_BAMs:
 # Perform fragment size distribution plot
 rule I1_fragment_size_distribution:
     input:
-        BAM = ancient(os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bam"]))),
-        BAM_index = ancient(os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bai"]))),
-        multiqcReportBAM = ancient("03_BAM_{DUP}/fastQC/multiQC_{DUP}_bams/multiQC_report_BAMs_{DUP}.html")
+        BAM = os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bam"])),
+        BAM_index = os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bai"])),
+        multiqcReportBAM = "03_BAM_{DUP}/fastQC/multiQC_{DUP}_bams/multiQC_report_BAMs_{DUP}.html"
     output:
         plot = os.path.join("03_BAM_{DUP}/fragmentSizeDistribution_plots/", "{SAMPLES}_fragment_size_distribution.pdf")
     params:
@@ -527,7 +527,7 @@ rule I1_fragment_size_distribution:
 # Perform fragment size distribution plot
 rule I2_fragment_size_distribution_report:
     input:
-        plots = ancient(expand(os.path.join("03_BAM_{dup}/fragmentSizeDistribution_plots/", "{sample}_fragment_size_distribution.pdf"), sample = SAMPLENAMES, dup=DUP))
+        plots = expand(os.path.join("03_BAM_{dup}/fragmentSizeDistribution_plots/", "{sample}_fragment_size_distribution.pdf"), sample = SAMPLENAMES, dup=DUP)
     output:
         report_pdf ="03_BAM_{DUP}/fragmentSizeDistribution_plots/ALL.SAMPLES_fragmentSizeDistribution_plots.pdf"
     threads:
@@ -551,7 +551,7 @@ if (eval(str(config["perform_HMCan_correction"])) == True):
     #  Generate config file for HMCcan
     rule J1_HMCan_config_file_and_genome_splitting:
         input:
-            dir = ancient(os.path.dirname("04_Normalization/normalized_bigWigs/"))
+            dir = os.path.dirname("04_Normalization/normalized_bigWigs/")
         output:
             HMCan_config = "04_Normalization/HMCan_output/CONFIGURATION_file_HMCan.txt"
         params:
@@ -629,8 +629,8 @@ if (eval(str(config["perform_HMCan_correction"])) == True):
     # CNV correction by HMCan
     rule J2_signal_correction_for_CNVs_HMCan:
         input:
-            dedup_BAM_shifted_sorted = ancient(os.path.join("03_BAM_{DUP}/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_sorted.bam"]))),
-            dedup_BAM_shifted_sorted_index = ancient(os.path.join("03_BAM_{DUP}/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_sorted.bam.bai"]))),
+            dedup_BAM_shifted_sorted = os.path.join("03_BAM_{DUP}/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_sorted.bam"])),
+            dedup_BAM_shifted_sorted_index = os.path.join("03_BAM_{DUP}/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_sorted.bam.bai"])),
             config_file = "04_Normalization/HMCan_output/CONFIGURATION_file_HMCan.txt",
         output:
             HMCan_regions = os.path.join("04_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_regions.bed"])),
@@ -657,8 +657,8 @@ if (eval(str(config["perform_HMCan_correction"])) == True):
     # Computing the scaling factor
     rule J3_computing_scaling_factor:
         input:
-            dedup_BAM_shifted_sorted = ancient(expand(os.path.join("03_BAM_{dup}/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_sorted.bam"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"]))),
-            dedup_BAM_shifted_sorted_index = ancient(expand(os.path.join("03_BAM_{dup}/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_sorted.bam.bai"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"]))),
+            dedup_BAM_shifted_sorted = expand(os.path.join("03_BAM_{dup}/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_sorted.bam"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"])),
+            dedup_BAM_shifted_sorted_index = expand(os.path.join("03_BAM_{dup}/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_sorted.bam.bai"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"])),
             fragment_size_report_pdf = "03_BAM_{DUP}/fragmentSizeDistribution_plots/ALL.SAMPLES_fragmentSizeDistribution_plots.pdf"
         output:
             npz_results = temp("04_Normalization/scalingFactor/scalingFactor_results.npz"),
@@ -700,8 +700,8 @@ if (eval(str(config["perform_HMCan_correction"])) == True):
     # Normalization scaling factor to reference sample
     rule J4_computing_scaling_factor_normalizationToReferenceSample:
         input:
-            dedup_BAM_shifted_sorted = ancient(expand(os.path.join("03_BAM_{dup}/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_sorted.bam"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"]))),
-            txt_result_notNorm = ancient("04_Normalization/scalingFactor/scalingFactor_results_to_normalize.txt")
+            dedup_BAM_shifted_sorted = expand(os.path.join("03_BAM_{dup}/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_sorted.bam"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"])),
+            txt_result_notNorm = "04_Normalization/scalingFactor/scalingFactor_results_to_normalize.txt"
         output:
             txt_result = "04_Normalization/scalingFactor/scalingFactor_results.txt"
         params:
@@ -728,8 +728,8 @@ if (eval(str(config["perform_HMCan_correction"])) == True):
     # Normalized bigWig generation
     rule J5_bigWig_CNV_adjusted_signal:
         input:
-            HMCan_bedGraph = ancient(os.path.join("04_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted.bedGraph"]))),
-            scaling_factors = ancient("04_Normalization/scalingFactor/scalingFactor_results.txt")
+            HMCan_bedGraph = os.path.join("04_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted.bedGraph"])),
+            scaling_factors = "04_Normalization/scalingFactor/scalingFactor_results.txt"
         output:
             norm_bdg = temp(os.path.join("04_Normalization/HMCan_output/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_NORMALIZED.bedGraph"]))),
             norm_bw = os.path.join("04_Normalization/normalized_bigWigs/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_normalized_bs", str(config["smallBinLength"]), ".bw"]))
@@ -765,8 +765,8 @@ else: # Skip HMCan and perform a classical "sequencing-depth" normalization
     # bigWig generation from BAM (not corrected by HMCan)
     rule J1_bigWig_normalization_woCNVcorrection:
         input:
-            dedup_BAM_shifted_sorted = ancient(os.path.join("03_BAM_{DUP}/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_sorted.bam"]))),
-            dedup_BAM_shifted_sorted_index = ancient(os.path.join("03_BAM_{DUP}/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_sorted.bam.bai"])))
+            dedup_BAM_shifted_sorted = os.path.join("03_BAM_{DUP}/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_sorted.bam"])),
+            dedup_BAM_shifted_sorted_index = os.path.join("03_BAM_{DUP}/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_sorted.bam.bai"]))
         output:
             norm_bw = os.path.join("04_Normalization/normalized_bigWigs/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_normalized_bs", str(config["bigWig_binSize"]), ".bw"]))
         params:
@@ -801,9 +801,9 @@ else: # Skip HMCan and perform a classical "sequencing-depth" normalization
     # MACS3 peakCalling on uncorrected bams
     rule J2_MACS3_peakCalling:
         input:
-            dedup_BAM_shifted_sorted = ancient(os.path.join("03_BAM_{DUP}/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_sorted.bam"]))),
-            dedup_BAM_shifted_sorted_index = ancient(os.path.join("03_BAM_{DUP}/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_sorted.bam.bai"]))),
-            #norm_bw = ancient(expand(os.path.join("04_Normalization/normalized_bigWigs/", ''.join(["{sample}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{dup}_shifted_normalized_bs", str(config["bigWig_binSize"]), ".bw"])), sample = SAMPLENAMES, dup=DUP))
+            dedup_BAM_shifted_sorted = os.path.join("03_BAM_{DUP}/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_sorted.bam"])),
+            dedup_BAM_shifted_sorted_index = os.path.join("03_BAM_{DUP}/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_sorted.bam.bai"])),
+            #norm_bw = expand(os.path.join("04_Normalization/normalized_bigWigs/", ''.join(["{sample}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{dup}_shifted_normalized_bs", str(config["bigWig_binSize"]), ".bw"])), sample = SAMPLENAMES, dup=DUP)
         output:
             peaks_xls = os.path.join("05_Peaks_MACS3/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_FDR", str(config["FDR_cutoff"]), "_peaks.xls"])),
             narrowPeaks = os.path.join("05_Peaks_MACS3/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{DUP}_shifted_FDR", str(config["FDR_cutoff"]), "_peaks.narrowPeak"])),
@@ -843,14 +843,14 @@ else: # Skip HMCan and perform a classical "sequencing-depth" normalization
 # Computation of the counts summary table
 rule K_counts_summary:
     input:
-        R1 = ancient(expand(os.path.join(config["runs_directory"], "".join(["{sample}", config['runs_suffix'][0], config['fastq_extension']])), sample = SAMPLENAMES)),
-        R2 = ancient(expand(os.path.join(config["runs_directory"], "".join(["{sample}", config['runs_suffix'][1], config['fastq_extension']])), sample = SAMPLENAMES)),
-        flagstat_on_unfiltered_BAM = ancient(expand(os.path.join("02_BAM/flagstat/", "{sample}_flagstat_UNfiltered_bam.txt"), sample = SAMPLENAMES)),
-        flagstat_on_filtered_woMT_BAM = ancient(expand(os.path.join("02_BAM/flagstat/", "{sample}_flagstat_filtered_bam_woMT.txt"), sample = SAMPLENAMES)),
-        dedup_BAM_flagstat = ancient(expand(os.path.join("03_BAM_{dup}/flagstat/", "{sample}_flagstat_filtered_bam_woMT_{dup}.txt"), sample = SAMPLENAMES, dup=DUP)),
-        dedup_BAM_shifted_sorted_flagstat = ancient(expand(os.path.join("03_BAM_{dup}/flagstat/", "{sample}_flagstat_woMT_{dup}_shifted_sorted.txt"), sample = SAMPLENAMES, dup=DUP)),
-        #scaling_factors = ancient("04_Normalization/scalingFactor/scalingFactor_results.txt"),
-        peaks_file = ancient(expand(os.path.join(PEAKSDIR, ''.join(["{sample}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{dup}_shifted_FDR", str(config["FDR_cutoff"]), "_peaks.narrowPeak"])), sample = SAMPLENAMES, dup=DUP))
+        R1 = expand(os.path.join(config["runs_directory"], "".join(["{sample}", config['runs_suffix'][0], config['fastq_extension']])), sample = SAMPLENAMES),
+        R2 = expand(os.path.join(config["runs_directory"], "".join(["{sample}", config['runs_suffix'][1], config['fastq_extension']])), sample = SAMPLENAMES),
+        flagstat_on_unfiltered_BAM = expand(os.path.join("02_BAM/flagstat/", "{sample}_flagstat_UNfiltered_bam.txt"), sample = SAMPLENAMES),
+        flagstat_on_filtered_woMT_BAM = expand(os.path.join("02_BAM/flagstat/", "{sample}_flagstat_filtered_bam_woMT.txt"), sample = SAMPLENAMES),
+        dedup_BAM_flagstat = expand(os.path.join("03_BAM_{dup}/flagstat/", "{sample}_flagstat_filtered_bam_woMT_{dup}.txt"), sample = SAMPLENAMES, dup=DUP),
+        dedup_BAM_shifted_sorted_flagstat = expand(os.path.join("03_BAM_{dup}/flagstat/", "{sample}_flagstat_woMT_{dup}_shifted_sorted.txt"), sample = SAMPLENAMES, dup=DUP),
+        #scaling_factors = "04_Normalization/scalingFactor/scalingFactor_results.txt",
+        peaks_file = expand(os.path.join(PEAKSDIR, ''.join(["{sample}_mapQ", str(config["mapQ_cutoff"]), "_woMT_{dup}_shifted_FDR", str(config["FDR_cutoff"]), "_peaks.narrowPeak"])), sample = SAMPLENAMES, dup=DUP)
     output:
         summary_file = os.path.join(SUMMARYDIR, "Counts/counts_summary.txt"),
         summary_file_temp = temp(os.path.join(SUMMARYDIR, "Counts/summary_file.temp"))
@@ -913,7 +913,7 @@ rule K_counts_summary:
 # Generation of samples PCA and Heatmap
 rule L1_multiBigwigSummary:
     input:
-        norm_bw = ancient(expand(os.path.join("04_Normalization/normalized_bigWigs/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_normalized_bs{binSize}.bw"), sample=SAMPLENAMES,  dup=DUP, MAPQ=str(config["mapQ_cutoff"]), binSize=str(BINS)))
+        norm_bw = expand(os.path.join("04_Normalization/normalized_bigWigs/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_normalized_bs{binSize}.bw"), sample=SAMPLENAMES,  dup=DUP, MAPQ=str(config["mapQ_cutoff"]), binSize=str(BINS))
     output:
         matrix = os.path.join(SUMMARYDIR, "Sample_comparisons/multiBigWigSummary_matrix_allSamples.npz")
     params:
@@ -1018,7 +1018,7 @@ rule L2_PCA_and_samples_correlation:
 # Generation of Lorenz curves
 rule L3_Lorenz_curve:
     input:
-        dedup_BAM_shifted_sorted = ancient(expand(os.path.join("03_BAM_{dup}/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_sorted.bam"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"])))
+        dedup_BAM_shifted_sorted = expand(os.path.join("03_BAM_{dup}/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_sorted.bam"), sample=SAMPLENAMES, dup=DUP, MAPQ=str(config["mapQ_cutoff"]))
     output:
         lorenz_plot = os.path.join(SUMMARYDIR, "Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf")
     params:
@@ -1053,8 +1053,8 @@ rule L3_Lorenz_curve:
 # Absolute peaks file and relative matrix score generation for MACS3/HMCan peaks
 rule M_all_peaks_file_and_score_matrix:
     input:
-        norm_bw = ancient(expand(os.path.join("04_Normalization/normalized_bigWigs/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_normalized_bs{binSize}.bw"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"]), dup=DUP, binSize=str(BINS))),
-        peaks_file = (expand(os.path.join(str(PEAKSDIR), "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_FDR{fdr}_peaks.narrowPeak"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"]), dup=DUP, fdr=str(config["FDR_cutoff"])))
+        norm_bw = expand(os.path.join("04_Normalization/normalized_bigWigs/", "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_normalized_bs{binSize}.bw"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"]), dup=DUP, binSize=str(BINS)),
+        peaks_file = expand(os.path.join(str(PEAKSDIR), "{sample}_mapQ{MAPQ}_woMT_{dup}_shifted_FDR{fdr}_peaks.narrowPeak"), sample=SAMPLENAMES, MAPQ=str(config["mapQ_cutoff"]), dup=DUP, fdr=str(config["FDR_cutoff"]))
     output:
         concatenation_bed = temp(os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/temp_all_samples_peaks_concatenation.bed")),
         concatenation_bed_sorted = temp(os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/temp_all_samples_peaks_concatenation_sorted.bed")),
@@ -1101,7 +1101,7 @@ rule M_all_peaks_file_and_score_matrix:
 # Compute peaks z-scores and plot heatmap for MACS3/HMCan peaks
 rule N_peaks_zScores_and_heatmap:
     input:
-        score_matrix_peaks_table = ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/peaks_score_matrix_all_samples_table_{PEAKCALLER}.tsv"))
+        score_matrix_peaks_table = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/peaks_score_matrix_all_samples_table_{PEAKCALLER}.tsv")
     output:
         rawScores_hetamap = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/Heatmaps/Heatmap_on_log1p.rawScores_for_{PEAKCALLER}.peaks_union_population.pdf")
     params:
@@ -1231,9 +1231,9 @@ rule O_Make_reference_genome_dictionary:
 # run base score recalibration (BSQR) of the bams
 rule P_GATK_bam_base_quality_score_recalibration:
     input:
-        genome_dict = ancient(''.join([re.sub("[.]([a-z]|[A-Z])*$", "",config["genome_fasta"]),'.dict'])),
-        dedup_BAM = ancient(os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bam"]))),
-        dedup_BAM_index = ancient(os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bai"])))
+        genome_dict = ''.join([re.sub("[.]([a-z]|[A-Z])*$", "",config["genome_fasta"]),'.dict']),
+        dedup_BAM = os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bam"])),
+        dedup_BAM_index = os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bai"]))
     params:
         sample = "{SAMPLES}",
         gatk_directory = GATKDIR,
@@ -1289,9 +1289,9 @@ rule P_GATK_bam_base_quality_score_recalibration:
 # run gatk haplotype caller
 rule Q_GATK_haplotype_calling:
     input:
-        concatenation_bed_collapsed_sorted = ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")),
-        dedup_BAM_bsqr = ancient(os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_bsqr.bam"]))),
-        dedup_BAM_bsqr_index = ancient(os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_bsqr.bai"])))
+        concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed"),
+        dedup_BAM_bsqr = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_bsqr.bam"])),
+        dedup_BAM_bsqr_index = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_bsqr.bai"]))
     params:
         genome = config["genome_fasta"],
         sample = "{SAMPLES}",
@@ -1322,9 +1322,9 @@ rule Q_GATK_haplotype_calling:
 # correct the genotypes that come out of haplotype caller
 rule R_GATK_haplotype_calling_correction:
     input:
-        concatenation_bed_collapsed_sorted = ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")),
-        gvcf = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.g.vcf.gz")),
-        gvcf_idx = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.g.vcf.gz.tbi"))
+        concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed"),
+        gvcf = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.g.vcf.gz"),
+        gvcf_idx = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.g.vcf.gz.tbi")
     params:
         sample = "{SAMPLES}",
         genome = config["genome_fasta"]
@@ -1348,8 +1348,8 @@ rule R_GATK_haplotype_calling_correction:
 # Call SNPs
 rule S1_GATK_call_SNPs:
     input:
-        concatenation_bed_collapsed_sorted = ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")),
-        vcf = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.vcf.gz"))
+        concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed"),
+        vcf = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.vcf.gz")
     params:
         sample = "{SAMPLES}",
         genome = config["genome_fasta"]
@@ -1380,7 +1380,7 @@ rule S1_GATK_call_SNPs:
 # Filter SNPs
 rule S2_GATK_filter_SNPs:
     input:
-        snp_vcf = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp.vcf"))
+        snp_vcf = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp.vcf")
     params:
         sample = "{SAMPLES}",
         DP_snp_threshold = config["DP_snp_threshold"],
@@ -1407,7 +1407,7 @@ rule S2_GATK_filter_SNPs:
 # Filter SNPs
 rule S3_GATK_vcf2txt_SNPs:
     input:
-        filtered_snp_vcf_gz = ancient(os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".vcf.gz"])))
+        filtered_snp_vcf_gz = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".vcf.gz"]))
     params:
         sample = "{SAMPLES}",
         fileds = ''.join(['"', '" "'.join(config["SnpSift_vcf_fields_to_extract"]), '"'])
@@ -1435,8 +1435,8 @@ rule S3_GATK_vcf2txt_SNPs:
 # Call indels
 rule T1_GATK_call_indels:
     input:
-        concatenation_bed_collapsed_sorted = ancient(os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")),
-        vcf = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.vcf.gz"))
+        concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed"),
+        vcf = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk.vcf.gz")
     params:
         sample = "{SAMPLES}",
         genome = config["genome_fasta"]
@@ -1467,7 +1467,7 @@ rule T1_GATK_call_indels:
 # Filter InDels
 rule T2_GATK_filter_indels:
     input:
-        indel_vcf = ancient(os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel.vcf"))
+        indel_vcf = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel.vcf")
     params:
         sample = "{SAMPLES}",
         DP_indel_threshold = config["DP_indel_threshold"],
@@ -1495,7 +1495,7 @@ rule T2_GATK_filter_indels:
 # Filter SNPs
 rule T3_GATK_vcf2txt_indels:
     input:
-        filtered_indel_vcf_gz = ancient(os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".vcf.gz"])))
+        filtered_indel_vcf_gz = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".vcf.gz"]))
     params:
         sample = "{SAMPLES}",
         fileds = ''.join(['"', '" "'.join(config["SnpSift_vcf_fields_to_extract"]), '"'])
