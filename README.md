@@ -293,6 +293,10 @@ The structure of the *output_folder* is the following:
 |
 └── <b>07_Variant_calling</b>
     ├── all_samples_peaks_concatenation_collapsed_sorted.bed
+    ├── all.samples_dedup_gatk-indel_filtered.DP20.QUAL20
+    ├── all.samples_dedup_gatk-snp_filtered.DP20.QUAL20
+    ├── all.samples_INDEL_counts_plot.pdf
+    ├── all.samples_SNP_counts_plot.pdf
     └── <b><em>sample</em></b>
         ├── <em>sample</em>_dedup_gatk-indel_filtered.DP20.QUAL20.txt
         ├── <em>sample</em>_dedup_gatk-indel_filtered.DP20.QUAL20.vcf.gz

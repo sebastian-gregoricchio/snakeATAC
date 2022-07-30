@@ -18,7 +18,6 @@
 <br/><br/>
 
 ## Introduction
-[<img src="https://raw.githubusercontent.com/sebastian-gregoricchio/snakeATAC/main/resources/snakeATAC_logo.svg" align="right" height = 150/>](https://sebastian-gregoricchio.github.io/snakeATAC)
 `SnakeATAC` is a snakemake based end-to-end pipeline to analyze ATAC-seq data. The input files required to run the pipeline are Paired-End fastq files. The pipeline include data quality check and normalization. It is included also a step of data reads shifting in order to take into account the Tn5 transposome insertion bias. Indeed, reads should be shifted +4bp and −5bp for positive and negative strand respectively, to account for the 9-bp duplication created by DNA repair of the nick by Tn5 transposase and achieve base-pair resolution of TF footprint and motif-related analyses ([Yan F., *et al.*, Genome Biol. 2020](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-020-1929-3)).
 
 ### Citation
@@ -304,6 +303,10 @@ The structure of the *output_folder* is the following:
 |
 └── <b>07_Variant_calling</b>
     ├── all_samples_peaks_concatenation_collapsed_sorted.bed
+    ├── all.samples_dedup_gatk-indel_filtered.DP20.QUAL20
+    ├── all.samples_dedup_gatk-snp_filtered.DP20.QUAL20
+    ├── all.samples_INDEL_counts_plot.pdf
+    ├── all.samples_SNP_counts_plot.pdf
     └── <b><em>sample</em></b>
         ├── <em>sample</em>_dedup_gatk-indel_filtered.DP20.QUAL20.txt
         ├── <em>sample</em>_dedup_gatk-indel_filtered.DP20.QUAL20.vcf.gz
