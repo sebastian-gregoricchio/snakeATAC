@@ -23,7 +23,7 @@ workdir: config["output_directory"]
 # get the unique samples names and other variables
 FILENAMES = next(os.walk(config["runs_directory"]))[2]
 RUNNAMES = [re.sub(rf"{config['fastq_extension']}$", "", i) for i in FILENAMES]
-SAMPLENAMES = numpy.unique([re.sub(rf"{config['runs_suffix'][0]}|{config['runs_suffix'][1]}.*$", "", i) for i in RUNNAMES])
+SAMPLENAMES = numpy.sort(numpy.unique([re.sub(rf"{config['runs_suffix'][0]}|{config['runs_suffix'][1]}.*$", "", i) for i in RUNNAMES]))
 
 if (eval(str(config["perform_HMCan_correction"])) == True):
     BINS=config["smallBinLength"]
@@ -95,13 +95,14 @@ else:
 
 
 if (eval(str(config["call_SNPs"]))):
-    snp = expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_{dup}_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".txt"])), sample=SAMPLENAMES, dup=DUP)
+    snp = os.path.join(GATKDIR, "all.samples_SNP_counts_plot.pdf")
 else:
     snp = []
 
 
 if (eval(str(config["call_indels"]))):
-    indels = expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_{dup}_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".txt"])), sample=SAMPLENAMES, dup=DUP)
+    #indels = os.path.join(GATKDIR, ''.join(["all.samples_", DUP, "_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".txt"]))
+    indels = os.path.join(GATKDIR, "all.samples_INDEL_counts_plot.pdf")
 else:
     indels = []
 
@@ -493,7 +494,7 @@ rule I1_fragment_size_distribution:
     input:
         BAM = os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bam"])),
         BAM_index = os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bai"])),
-        multiqcReportBAM = "03_BAM_{DUP}/fastQC/multiQC_{DUP}_bams/multiQC_report_BAMs_{DUP}.html"
+        #multiqcReportBAM = "03_BAM_{DUP}/fastQC/multiQC_{DUP}_bams/multiQC_report_BAMs_{DUP}.html"
     output:
         plot = os.path.join("03_BAM_{DUP}/fragmentSizeDistribution_plots/", "{SAMPLES}_fragment_size_distribution.pdf")
     params:
@@ -1404,7 +1405,7 @@ rule S2_GATK_filter_SNPs:
 
 
 # ----------------------------------------------------------------------------------------
-# Filter SNPs
+# Export SNPs table
 rule S3_GATK_vcf2txt_SNPs:
     input:
         filtered_snp_vcf_gz = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".vcf.gz"]))
@@ -1428,6 +1429,66 @@ rule S3_GATK_vcf2txt_SNPs:
         """
 # ----------------------------------------------------------------------------------------
 
+
+# ----------------------------------------------------------------------------------------
+# Merge all SNPs tables
+rule S4_GATK_merge_SNP_tables:
+    input:
+        snp_txt = expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_{dup}_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".txt"])), sample=SAMPLENAMES, dup=DUP)
+    params:
+        sample = SAMPLENAMES,
+        gatk_dir = GATKDIR,
+        suffix_tb = ''.join(["_", DUP, "_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".txt"])
+    output:
+        merged_snps = os.path.join(GATKDIR, ''.join(["all.samples_", DUP, "_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".txt"]))
+    run:
+        shell("printf '\033[1;36mMerging all SNP txt tables in one...\\n\033[0m'")
+
+        import pandas as pd
+
+        merged_table = pd.DataFrame()
+
+        for s in params.sample:
+            if os.path.getsize(''.join([GATKDIR, s, "/", s, params.suffix_tb])) > 0:
+                tb = pd.read_table(''.join([GATKDIR, s, "/", s, params.suffix_tb]))
+                tb.insert(0, "sample_ID", s, allow_duplicates=True)
+                merged_table = pd.concat([merged_table, tb], ignore_index = True, sort = False)
+
+        merged_table.to_csv(output.merged_snps, encoding="utf-8", index=False, header=True, sep="\t")
+
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# Plot SNP occurences
+rule S5_GATK_plot_SNPs:
+    input:
+        merged_SNPs = os.path.join(GATKDIR, ''.join(["all.samples_", DUP, "_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".txt"]))
+    params:
+        sample = SAMPLENAMES,
+        plot_title = ''.join(["SNPs (on ", DUP, " bams) DP > ", str(config["DP_snp_threshold"]), ", QUAL > ", str(config["QUAL_snp_threshold"]), ", w\o 0|0"])
+    output:
+        indel_plot = os.path.join(GATKDIR, "all.samples_SNP_counts_plot.pdf")
+    run:
+        shell("printf '\033[1;36mPlotting SNP occurences per sample...\\n\033[0m'")
+
+        import pandas as pd
+        import numpy as np
+        import matplotlib as mpl
+        mpl.use('Agg')
+        import matplotlib.pyplot as plt
+
+        tb = pd.read_table(input.merged_SNPs)
+
+        occurences = []
+        for s in np.flip(params.sample):
+            occurences.append(len(tb[tb["sample_ID"] == s].index))
+
+        occurences_tb = pd.DataFrame({'Sample':np.flip(params.sample), 'SNP.counts':occurences})
+        plot = occurences_tb.plot.barh(x='Sample', y='SNP.counts', title = params.plot_title)
+        plot.figure.savefig(output.indel_plot, bbox_inches='tight')
+
+# ----------------------------------------------------------------------------------------
 
 
 
@@ -1492,7 +1553,7 @@ rule T2_GATK_filter_indels:
 
 
 # ----------------------------------------------------------------------------------------
-# Filter SNPs
+# Export InDels table
 rule T3_GATK_vcf2txt_indels:
     input:
         filtered_indel_vcf_gz = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_{DUP}_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".vcf.gz"]))
@@ -1514,6 +1575,67 @@ rule T3_GATK_vcf2txt_indels:
 
         grep -v '0/0' {output.filtered_indel_allGT_tb} > {output.filtered_indel_tb}
         """
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# Merge all InDel tables
+rule T4_GATK_merge_indel_tables:
+    input:
+        indel_txt = expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_{dup}_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".txt"])), sample=SAMPLENAMES, dup=DUP)
+    params:
+        sample = SAMPLENAMES,
+        gatk_dir = GATKDIR,
+        suffix_tb = ''.join(["_", DUP, "_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".txt"])
+    output:
+        merged_indels = os.path.join(GATKDIR, ''.join(["all.samples_", DUP, "_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".txt"]))
+    run:
+        shell("printf '\033[1;36mMerging all InDel txt tables in one...\\n\033[0m'")
+
+        import pandas as pd
+
+        merged_table = pd.DataFrame()
+
+        for s in params.sample:
+            if os.path.getsize(''.join([GATKDIR, s, "/", s, params.suffix_tb])) > 0:
+                tb = pd.read_table(''.join([GATKDIR, s, "/", s, params.suffix_tb]))
+                tb.insert(0, "sample_ID", s, allow_duplicates=True)
+                merged_table = pd.concat([merged_table, tb], ignore_index = True, sort = False)
+
+        merged_table.to_csv(output.merged_indels, encoding="utf-8", index=False, header=True, sep="\t")
+
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# Plot indel occurences
+rule T5_GATK_plot_indels:
+    input:
+        merged_indels = os.path.join(GATKDIR, ''.join(["all.samples_", DUP, "_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".txt"]))
+    params:
+        sample = SAMPLENAMES,
+        plot_title = ''.join(["InDels (on ", DUP, " bams) DP > ", str(config["DP_indel_threshold"]), ", QUAL > ", str(config["QUAL_indel_threshold"]), ", w\o 0|0"])
+    output:
+        indel_plot = os.path.join(GATKDIR, "all.samples_INDEL_counts_plot.pdf")
+    run:
+        shell("printf '\033[1;36mPlotting indel occurences per sample...\\n\033[0m'")
+
+        import pandas as pd
+        import numpy as np
+        import matplotlib as mpl
+        mpl.use('Agg')
+        import matplotlib.pyplot as plt
+
+        tb = pd.read_table(input.merged_indels)
+
+        occurences = []
+        for s in np.flip(params.sample):
+            occurences.append(len(tb[tb["sample_ID"] == s].index))
+
+        occurences_tb = pd.DataFrame({'Sample':np.flip(params.sample), 'InDel.counts':occurences})
+        plot = occurences_tb.plot.barh(x='Sample', y='InDel.counts', title = params.plot_title)
+        plot.figure.savefig(output.indel_plot, bbox_inches='tight')
+
 # ----------------------------------------------------------------------------------------
 
 
