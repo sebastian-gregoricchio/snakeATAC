@@ -1466,7 +1466,7 @@ rule S5_GATK_plot_SNPs:
         merged_SNPs = os.path.join(GATKDIR, ''.join(["all.samples_", DUP, "_gatk-snp_filtered.DP", str(config["DP_snp_threshold"]), ".QUAL", str(config["QUAL_snp_threshold"]), ".txt"]))
     params:
         sample = SAMPLENAMES,
-        plot_title = ''.join(["SNPs (on ", DUP, " bams) DP > ", str(config["DP_snp_threshold"]), ", QUAL > ", str(config["QUAL_snp_threshold"]), ", w\o 0|0"])
+        plot_title = ''.join(["SNPs (on ", DUP, " bams): DP > ", str(config["DP_snp_threshold"]), ", QUAL > ", str(config["QUAL_snp_threshold"]), ", w\o 0|0"])
     output:
         indel_plot = os.path.join(GATKDIR, "all.samples_SNP_counts_plot.pdf")
     run:
@@ -1614,7 +1614,7 @@ rule T5_GATK_plot_indels:
         merged_indels = os.path.join(GATKDIR, ''.join(["all.samples_", DUP, "_gatk-indel_filtered.DP", str(config["DP_indel_threshold"]), ".QUAL", str(config["QUAL_indel_threshold"]), ".txt"]))
     params:
         sample = SAMPLENAMES,
-        plot_title = ''.join(["InDels (on ", DUP, " bams) DP > ", str(config["DP_indel_threshold"]), ", QUAL > ", str(config["QUAL_indel_threshold"]), ", w\o 0|0"])
+        plot_title = ''.join(["InDels (on ", DUP, " bams): DP > ", str(config["DP_indel_threshold"]), ", QUAL > ", str(config["QUAL_indel_threshold"]), ", w\o 0|0"])
     output:
         indel_plot = os.path.join(GATKDIR, "all.samples_INDEL_counts_plot.pdf")
     run:
