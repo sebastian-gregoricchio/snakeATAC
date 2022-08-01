@@ -62,7 +62,12 @@ If no errors occur, the pipeline can be run with the same command line without t
 snakemake -s </target/folder>/snakeATAC/workflow/snakeATAC.snakefile --configfile </target/folder>/snakeATAC/config/snakeATAC_config.yaml --cores 12
 ```
 
-Notice that the absence of errors does not mean that the pipeline will run without any issues; the "dry-run" is only checking whether all the resources are available.
+Notice that the absence of errors does not mean that the pipeline will run without any issues; the "dry-run" is only checking whether all the resources are available. <br>
+Furthermore, there is the possibility to run the pipeline only partailly. An example of usage could be if someone wants to have a look to the fast quality controls (fastQC and multiQC reports) before to perform the alignment. To do that, it is sufficient to run a dry-run (`-n` mode); pick the name of the rule at which you want the pipeline to stop; type the following command:
+
+```shell
+snakemake -s </target/folder>/snakeATAC/workflow/snakeATAC.snakefile --configfile </target/folder>/snakeATAC/config/snakeATAC_config.yaml --cores 12 --until stop_rule_name
+```
 
 <br/><br/>
 
