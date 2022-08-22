@@ -88,10 +88,12 @@ if (eval(str(config["call_variants"])) | eval(str(config["call_SNPs"])) | eval(s
     dedup_BAM_bsqr = expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.bam"])), sample=SAMPLENAMES, dup=DUP)
     dedup_BAM_bsqr_index = expand(os.path.join(GATKDIR, ''.join(["{sample}/{sample}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{dup}_bsqr.bai"])), sample=SAMPLENAMES, dup=DUP)
     vcf = expand(os.path.join(GATKDIR, "{sample}/{sample}_{dup}_gatk.vcf.gz"), sample=SAMPLENAMES, dup = DUP)
+    plot_coverage = expand(os.path.join(GATKDIR, "{sample}/{sample}_plotCoverage.pdf"), sample=SAMPLENAMES)
 else:
     dedup_BAM_bsqr = []
     dedup_BAM_bsqr_index = []
     vcf = []
+    plot_coverage = []
 
 
 if (eval(str(config["call_SNPs"]))):
@@ -186,6 +188,7 @@ rule AAA_initialization:
         # Rules gatk variant calling
         dedup_BAM_bsqr = dedup_BAM_bsqr,
         dedup_BAM_bsqr_index = dedup_BAM_bsqr_index,
+        plot_coverage = plot_coverage,
         vcf = vcf,
         snp = snp,
         indels = indels
@@ -263,23 +266,21 @@ rule B_multiQC_raw:
         """
 # ----------------------------------------------------------------------------------------
 
-if not os.path.exists("".join([config["genome_fasta"], ".fai"])):
+if not os.path.exists(''.join([re.sub(".gz", "", config["genome_fasta"], count=0, flags=0),".fai"])):
     # ----------------------------------------------------------------------------------------
     # Reads alignement
     rule Cextra_generate_genome_index:
         input:
-            multiqcReportRaw = "01_fastQC_raw/multiQC_raw/multiQC_report_fastqRaw.html"
+            genome = ancient(config["genome_fasta"]),
         output:
-            genome_fai = "".join([config["genome_fasta"], ".fai"])
-        params:
-            genome = config["genome_fasta"],
+            genome_fai = ''.join([re.sub(".gz", "", config["genome_fasta"], count=0, flags=0),".fai"])
         threads:
             config["bwa_threads"]
         shell:
             """
             printf '\033[1;36mGenerating the genome index...\\n\033[0m'
             bwa index {params.genome}
-            samtools faidx {params.genome}
+            samtools faidx {input.genome}
             printf '\033[1;36mGenome index done.\\n\033[0m'
             """
 # ----------------------------------------------------------------------------------------
@@ -293,7 +294,7 @@ rule C_bwa_align:
         #multiqcReportRaw = ancient("01_fastQC_raw/multiQC_raw/multiQC_report_fastqRaw.html"),
         R1 = os.path.join(config["runs_directory"], "".join(["{SAMPLES}", config['runs_suffix'][0], config['fastq_extension']])),
         R2 = os.path.join(config["runs_directory"], "".join(["{SAMPLES}", config['runs_suffix'][1], config['fastq_extension']])),
-        genome_fai = "".join([config["genome_fasta"], ".fai"])
+        genome_fai = ancient(''.join([re.sub(".gz", "", config["genome_fasta"], count=0, flags=0),".fai"]))
     output:
         SAM = os.path.join("01b_SAM_tempFolder/", "{SAMPLES}.sam")
     params:
@@ -1230,11 +1231,16 @@ rule O_Make_reference_genome_dictionary:
 
 # ----------------------------------------------------------------------------------------
 # run base score recalibration (BSQR) of the bams
-rule P_GATK_bam_base_quality_score_recalibration:
+rule P1_GATK_bam_base_quality_score_recalibration:
     input:
         genome_dict = ''.join([re.sub("[.]([a-z]|[A-Z])*$", "",config["genome_fasta"]),'.dict']),
         dedup_BAM = os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bam"])),
         dedup_BAM_index = os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}.bai"]))
+    output:
+        dedup_BAM_withRG = temp(os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_withRG.bam"]))),
+        bsqr_table = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_bsqr.table"])),
+        dedup_BAM_bsqr = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_bsqr.bam"])),
+        dedup_BAM_bsqr_index = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_bsqr.bai"]))
     params:
         sample = "{SAMPLES}",
         gatk_directory = GATKDIR,
@@ -1244,11 +1250,6 @@ rule P_GATK_bam_base_quality_score_recalibration:
         max_records = config["PICARD_max_records_in_ram"]
     threads:
         config["SAMtools_threads"]
-    output:
-        dedup_BAM_withRG = temp(os.path.join("03_BAM_{DUP}/unshifted_bams/", ''.join(["{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_withRG.bam"]))),
-        bsqr_table = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_bsqr.table"])),
-        dedup_BAM_bsqr = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_bsqr.bam"])),
-        dedup_BAM_bsqr_index = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_{DUP}_bsqr.bai"]))
     shell:
         """
         mkdir -p {params.gatk_directory}{params.sample}/
@@ -1282,6 +1283,36 @@ rule P_GATK_bam_base_quality_score_recalibration:
 
         printf '\033[1;36m{params.sample}: Indexing recalibrated bam...\\n\033[0m'
         samtools index -@ {params.CPUs} -b {output.dedup_BAM_bsqr} {output.dedup_BAM_bsqr_index}
+        """
+# ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# compute the coverage
+rule P2_plotCoverage_ATAC_peaks:
+    input:
+        dedup_BAM_bsqr = os.path.join(GATKDIR, ''.join(["{SAMPLES}/{SAMPLES}_mapQ", str(config["mapQ_cutoff"]), "_sorted_woMT_", str(DUP), "_bsqr.bam"])),
+        concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")
+    output:
+        coverage_plot = os.path.join(GATKDIR, "{SAMPLES}/{SAMPLES}_plotCoverage.pdf")
+    params:
+        label = "{SAMPLES}",
+        blacklist = config["blacklist_file"],
+        CPUs = config["plotFingerprint_threads"]
+    threads:
+        config["plotFingerprint_threads"]
+    shell:
+        """
+        printf '\033[1;36m{params.label}: Plotting coverage at ATAC peaks...\\n\033[0m'
+
+        plotCoverage \
+        --bamfiles {input.dedup_BAM_bsqr} \
+        --labels {params.label} \
+        --BED {input.concatenation_bed_collapsed_sorted} \
+        --blackListFileName {params.blacklist} \
+        --plotFile {output.coverage_plot} \
+        --plotTitle {params.label} \
+        --numberOfProcessors {params.CPUs}
         """
 # ----------------------------------------------------------------------------------------
 
