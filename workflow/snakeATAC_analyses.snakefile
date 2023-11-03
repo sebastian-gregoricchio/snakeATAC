@@ -102,7 +102,7 @@ else:
 
 # CNA signal corrections
 if (eval(str(config["copy_number_variation"]["call_CNV"]))):
-    CNA_corrected_bw = expand(''.join(["03_Normalization_CNA.corrected/RPM_normalized/{sample}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized_CNA.corrected_bs", str(config["copy_number_variation"]["corrected_bigWig_binSize"]), ".bw"]), sample=SAMPLENAMES)
+    CNA_corrected_bw = expand(''.join(["03_Normalization/RPM_normalized_CNA.corrected/{sample}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized_CNA.corrected_bs", str(config["copy_number_variation"]["corrected_bigWig_binSize"]), ".bw"]), sample=SAMPLENAMES)
 else:
     CNA_corrected_bw = []
 
@@ -1059,7 +1059,7 @@ rule correct_CNV_normalized_bigWigs:
         normalized_bigWig = ''.join(["03_Normalization/RPM_normalized/{SAMPLES}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized.bw"])
     output:
         sorted_bedGraph = os.path.join(COPYWRITERDIR, ''.join(["{SAMPLES}/CNAprofiles/{SAMPLES}_filtered.abs.", str(config["copy_number_variation"]["CNA_threshold"]), "_linear_CNAcounts_sorted.bedGraph"])),
-        CNA_corrected_bw = ''.join(["03_Normalization_CNA.corrected/RPM_normalized/{SAMPLES}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized_CNA.corrected_bs", str(config["copy_number_variation"]["corrected_bigWig_binSize"]), ".bw"])
+        CNA_corrected_bw = ''.join(["03_Normalization/RPM_normalized_CNA.corrected/{SAMPLES}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized_CNA.corrected_bs", str(config["copy_number_variation"]["corrected_bigWig_binSize"]), ".bw"])
     params:
         sample = "{SAMPLES}",
         bigWig_filtered = os.path.join(COPYWRITERDIR, ''.join(["{SAMPLES}/CNAprofiles/{SAMPLES}_filtered.abs.", str(config["copy_number_variation"]["CNA_threshold"]), "_linear_CNAcounts.bw"])),
