@@ -1,0 +1,29 @@
+# This .yaml cofinguration file contains all variables used by the snakemake pipeline
+# DO NOT CHANGE parameter names without changing it in Snakefile as well
+# On the other hand, some parameter values have to be inevitably modifed
+# **********************************************************************************************************************************
+
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ DNA MAPPING @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+### 0. General workflow parameters
+fastq_directory:
+output_directory:
+genome_fasta:
+umi_present: False
+fastq_suffix: ".fastq.gz"
+read_suffix: ['_R1', '_R2']
+
+
+### 1. FASTQ trimming
+cutadapt_trimm_options: ''
+fw_adapter_sequence: "AGATCGGAAGAGC"
+rv_adapter_sequence: "AGATCGGAAGAGC"
+run_fastq_qc: True
+
+### 2. BWA mapping
+bwa_options: ''
+
+
+### 2. BAM filtering
+remove_duplicates: True
+MAPQ_threshold: 20
