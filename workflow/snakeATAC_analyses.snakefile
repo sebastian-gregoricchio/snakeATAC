@@ -181,6 +181,7 @@ if (eval(str(config["bam_features"]["skip_bam_filtering"])) == False):
             bam_mapq_only = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, ".bam"]))),
             bam_mapq_only_sorted = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted.bam"]))),
             bam_mapq_only_sorted_index = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted.bai"]))),
+            idxstats_file = os.path.join(SUMMARYDIR, "/reads_per_chromosome/{SAMPLES}_idxstats_read_per_chromosome.txt"),
             bam_mapq_only_sorted_woMT = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT.bam"]))),
             bam_mapq_only_sorted_woMT_index = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT.bam.bai"])))
         params:
@@ -197,6 +198,8 @@ if (eval(str(config["bam_features"]["skip_bam_filtering"])) == False):
 
             $CONDA_PREFIX/bin/samtools sort -@ {threads} {output.bam_mapq_only} -o {output.bam_mapq_only_sorted}
             $CONDA_PREFIX/bin/samtools index -@ {threads} -b {output.bam_mapq_only_sorted} {output.bam_mapq_only_sorted_index}
+
+            $CONDA_PREFIX/bin/samtools idxstats {output.bam_mapq_only_sorted} > {output.idxstats_file}
 
             printf '\033[1;36m{params.sample}: Removing MT from BAM...\\n\033[0m'
             $CONDA_PREFIX/bin/samtools idxstats {output.bam_mapq_only_sorted} | cut -f 1 | grep -v -E '^chrM|^M' | xargs ${{CONDA_PREFIX}}/bin/samtools view -@ {threads} -b {output.bam_mapq_only_sorted} > {output.bam_mapq_only_sorted_woMT}
