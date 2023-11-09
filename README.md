@@ -35,7 +35,7 @@ DOI: <a href="https://doi.org/XYZ">XYZ</a>
 
 <br/><br/>
 
-## Documentation [<img src="https://raw.githubusercontent.com/sebastian-gregoricchio/sebastian-gregoricchio.github.io/main/generic_resources/documentation.svg" align="right" height = 150/>](https://github.com/sebastian-gregoricchio/SPACCa/wiki)
+## Documentation [<img src="https://raw.githubusercontent.com/sebastian-gregoricchio/sebastian-gregoricchio.github.io/main/generic_resources/documentation.svg" align="right" height = 150/>](https://github.com/sebastian-gregoricchio/snakeATAC/wiki)
 Details on the [installation](https://github.com/sebastian-gregoricchio/snakeATAC/wiki/02.-Installation-and-dependencies) and [usage](https://github.com/sebastian-gregoricchio/snakeATAC/wiki/) of `snakeATAC` can be found at the dedicated [Wiki](https://github.com/sebastian-gregoricchio/snakeATAC/wiki/).
 
 <br/><br/>
