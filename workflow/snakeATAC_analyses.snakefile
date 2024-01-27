@@ -544,9 +544,11 @@ rule peakCalling_MACS3:
     output:
         peaks_xls = os.path.join(PEAKSDIR, ''.join(["{SAMPLES}_mapq", MAPQ, "_woMT_",DUP,"_qValue", str(config["peak_calling"]["qValue_cutoff"]), "_peaks.xls"])),
         narrowPeaks = os.path.join(PEAKSDIR, ''.join(["{SAMPLES}_mapq", MAPQ, "_woMT_",DUP,"_qValue", str(config["peak_calling"]["qValue_cutoff"]), "_peaks.narrowPeak"])),
+        narrowPeaks_chr = os.path.join(PEAKSDIR, ''.join(["{SAMPLES}_mapq", MAPQ, "_woMT_",DUP,"_qValue", str(config["peak_calling"]["qValue_cutoff"]), "_peaks_chr.narrowPeak"])),
         summits = os.path.join(PEAKSDIR, ''.join(["{SAMPLES}_mapq", MAPQ, "_woMT_",DUP,"_qValue", str(config["peak_calling"]["qValue_cutoff"]), "_summits.bed"]))
     params:
         genomeSize = str(config["genomic_annotations"]["effective_genomeSize"]),
+        blacklist = config["blacklist_file"],
         peak_caller = PEAKCALLER.lower(),
         peaks_dir = PEAKSDIR,
         qValue = str(config["peak_calling"]["qValue_cutoff"]),
@@ -572,6 +574,9 @@ rule peakCalling_MACS3:
         --keep-dup all \
         --nolambda \
         {params.summits} 2> {log.out}
+
+        # add chr to peak files
+        $CONDA_PREFIX/bin/bedtools subtract -nonamecheck -a {output.narrowPeaks} -b {params.blacklist} | awk '{{if (length($1) <3 && $1 !="MT"){{print "chr"$0}} else {{print $0}} }}' > {output.narrowPeaks_chr}
         """
 # ----------------------------------------------------------------------------------------
 
@@ -1741,7 +1746,7 @@ rule GATK_plot_SNPs:
             occurences.append(len(tb[tb["sample_ID"] == s].index))
 
         occurences_tb = pd.DataFrame({'Sample':np.flip(params.sample), 'SNP.counts':occurences})
-        plot = occurences_tb.plot.barh(x='Sample', y='SNP.counts', title = params.plot_title)
+        plot = occurences_tb.plot.barh(x='Sample', y='SNP.counts', title = params.plot_title, legend=False, xlabel = "SNP count")
         plot.figure.savefig(output.snp_plot, bbox_inches='tight')
 
 
@@ -1923,7 +1928,7 @@ rule GATK_plot_InDels:
             occurences.append(len(tb[tb["sample_ID"] == s].index))
 
         occurences_tb = pd.DataFrame({'Sample':np.flip(params.sample), 'InDel.counts':occurences})
-        plot = occurences_tb.plot.barh(x='Sample', y='InDel.counts', title = params.plot_title)
+        plot = occurences_tb.plot.barh(x='Sample', y='InDel.counts', title = params.plot_title, legend=False, xlabel = "InDel count")
         plot.figure.savefig(output.indel_plot, bbox_inches='tight')
 
 
