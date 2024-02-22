@@ -27,3 +27,4 @@ bwa_options: ''
 ### 2. BAM filtering
 remove_duplicates: True
 MAPQ_threshold: 20
+remove_other_chromosomes_pattern: "CMV|HBV|HTLV|HPV|SV40|MCV|KSHV|chrUn|random|HCV|HIV|EBV"
