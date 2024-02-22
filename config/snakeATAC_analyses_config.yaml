@@ -11,6 +11,7 @@ workflow_configuration:
 bam_features:
   bam_suffix: "_mapq20_sorted_woMT_dedup.bam"
   skip_bam_filtering: True
+  remove_other_chromosomes_pattern: "CMV|HBV|HTLV|HPV|SV40|MCV|KSHV|chrUn|random|HCV|HIV|EBV"
   umi_present: False
   remove_duplicates: True
   MAPQ_threshold: 20
@@ -52,6 +53,7 @@ quality_controls:
 
 ### 4. Somatic Variants --------------------------------------------------------------------------------------------------------------
 somatic_variants:
+  skip_base_quality_recalibration: False
   call_SNPs: False
   call_indels: False
   dbsnp_file: "/path/to/dbsnp_file.vcf.gz"    # To make dbSNP without 'chr' -->  awk '{gsub(/\chr/, "")}1' your.vcf > withoutchr.vcf
