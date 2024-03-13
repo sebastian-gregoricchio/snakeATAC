@@ -3,15 +3,16 @@
 # On the other hand, some parameter values have to be inevitably modifed
 # **********************************************************************************************************************************
 
-### 1. General workflow parameters  --------------------------------------------------------------------------------------------------
+# @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ ESSENTIAL PARAMETERS @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+### 1. General workflow parameters  =========================================================================================================
 workflow_configuration:
-  runs_directory: "/path/to/your/bam_directory"
+  runs_directory: "/path/to/your/bams"
   output_directory: "/path/to/output/folder"
 
 bam_features:
   bam_suffix: "_mapq20_sorted_woMT_dedup.bam"
   skip_bam_filtering: True
-  remove_other_chromosomes_pattern: "CMV|HBV|HTLV|HPV|SV40|MCV|KSHV|chrUn|random|HCV|HIV|EBV"
+  remove_other_chromosomes_pattern: "^CMV|^HBV|^HTLV|^HPV|^SV40|^MCV|^KSHV|^chrUn|random|^HCV|^HIV|EBV"
   umi_present: False
   remove_duplicates: True
   MAPQ_threshold: 20
@@ -33,7 +34,7 @@ peak_calling:
   call_summits: True
   FRiP_threshold: 20 #%
   peak_score_heatmap:
-    plot_heatmap: False
+    plot_heatmap: True
     raw_heatmap_color: "Blues"
     zScore_heatmap_color: "seismic"
 
@@ -54,9 +55,10 @@ quality_controls:
 ### 4. Somatic Variants --------------------------------------------------------------------------------------------------------------
 somatic_variants:
   skip_base_quality_recalibration: False
-  call_SNPs: False
-  call_indels: False
-  dbsnp_file: "/path/to/dbsnp_file.vcf.gz"    # To make dbSNP without 'chr' -->  awk '{gsub(/\chr/, "")}1' your.vcf > withoutchr.vcf
+  call_SNPs: True
+  call_indels: True
+  dbsnp_file: "/home/s.gregoricchio/annotations/gatk/dbsnp/resources_broad_hg38_v0_Homo_sapiens_assembly38.dbsnp138_woChr_woChrHeader.vcf.gz"
+  # To make dbSNP without 'chr' -->  awk '{gsub(/\chr/, "")}1' your.vcf > withoutchr.vcf
   DP_snp_threshold: 20
   QUAL_snp_threshold: 0
   DP_indel_threshold: 20
@@ -67,10 +69,11 @@ somatic_variants:
 
 ### 6. Copy Number Variations ---------------------------------------------------------------------------------------------------------
 copy_number_variation:
-  call_CNV: False
-  kb_bin_resolution: 20
+  call_CNV: True
+  chromosome_prefix: ""
+  kb_bin_resolution: 50
   CNA_threshold: 2
-  CNA_plot_line_colors: "red"  # any R-supported
+  CNA_plot_line_colors: "red"
   CNA_plot_point_size: 0.5
   CNA_plot_point_transparency: 0.5
   corrected_bigWig_binSize: 10 #bp
