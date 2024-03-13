@@ -16,8 +16,8 @@ read_suffix: ['_R1', '_R2']
 
 ### 1. FASTQ trimming
 cutadapt_trimm_options: ''
-fw_adapter_sequence: "AGATCGGAAGAGC"
-rv_adapter_sequence: "AGATCGGAAGAGC"
+fw_adapter_sequence: "CTGTCTCTTATACACATCT"
+rv_adapter_sequence: "CTGTCTCTTATACACATCT"
 run_fastq_qc: True
 
 ### 2. BWA mapping
