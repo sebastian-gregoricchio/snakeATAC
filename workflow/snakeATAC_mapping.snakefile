@@ -139,7 +139,7 @@ rule cutadapt_PE:
         out = "01_trimmed_fastq/logs/cutadapt.{SAMPLE}.out",
         err = "01_trimmed_fastq/logs/cutadapt.{SAMPLE}.err"
     threads:
-        workflow.cores
+        max((workflow.cores - 1), 1)
     benchmark:
         "benchmarks/cutadapt_PE/cutadapt_PE---{SAMPLE}_benchmark.txt"
     shell:
