@@ -120,6 +120,12 @@ else:
     indels = []
 
 
+# Chromosome remove chr_remove_pattern
+if (len(config["bam_features"]["remove_other_chromosomes_pattern"]) > 0):
+    chr_remove_pattern = '^chrM|^M|'+config["bam_features"]["remove_other_chromosomes_pattern"]
+else:
+    chr_remove_pattern = '^chrM|^M'
+
 # ========================================================================================
 #  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # ========================================================================================
@@ -139,7 +145,8 @@ rule AAA_initialization:
         summary_file = os.path.join(SUMMARYDIR, "Counts/counts_summary.txt"),
         correlation_outputs = correlation_outputs,
         correlation_outputs_peaks = correlation_outputs_peaks,
-        lorenz_plot = os.path.join(SUMMARYDIR, "Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf"),
+        lorenz_plot = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf"),
+        lorenz_plot_ggplot = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf"),
         CNA_corrected_bw = CNA_corrected_bw,
         rawScores_hetamap_peaks = hetamap_peaks,
         snp = snp,
@@ -179,30 +186,43 @@ if (eval(str(config["bam_features"]["skip_bam_filtering"])) == False):
             source_bam = os.path.join(config["workflow_configuration"]["runs_directory"], ''.join(["{SAMPLES}", config["bam_features"]["bam_suffix"]]))
         output:
             bam_mapq_only = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, ".bam"]))),
+            bam_mapq_only_sorted_toFix = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_toFix.bam"]))),
+            bam_mapq_only_sorted_index_toFix = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_toFix.bai"]))),
             bam_mapq_only_sorted = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted.bam"]))),
             bam_mapq_only_sorted_index = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted.bai"]))),
-            idxstats_file = os.path.join(SUMMARYDIR, "/reads_per_chromosome/{SAMPLES}_idxstats_read_per_chromosome.txt"),
+            idxstats_file = os.path.join(SUMMARYDIR, "reads_per_chromosome/{SAMPLES}_idxstats_read_per_chromosome.txt"),
             bam_mapq_only_sorted_woMT = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT.bam"]))),
             bam_mapq_only_sorted_woMT_index = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT.bam.bai"])))
         params:
             sample = "{SAMPLES}",
-            MAPQ_threshold = config["MAPQ_threshold"]
+            MAPQ_threshold = MAPQ,
+            chr_remove_pattern = chr_remove_pattern
         threads:
-            max(math.floor(workflow.cores/len(SAMPLENAMES)), 1)
+            workflow.cores
+        log:
+            fixmate_log = "01_BAM_filtered/FixMateInformation_logs/{SAMPLES}_FixMateInformation.log"
         benchmark:
             "benchmarks/MAPQ_MT_filter/MAPQ_MT_filter---{SAMPLES}_benchmark.txt"
         shell:
             """
-            printf '\033[1;36m{params.sample}: filtering MAPQ and reemove mitochondrial chromosome...\\n\033[0m'
+            printf '\033[1;36m{params.sample}: filtering MAPQ...\\n\033[0m'
             $CONDA_PREFIX/bin/samtools view -@ {threads} -h -q {params.MAPQ_threshold} {input.source_bam} -o {output.bam_mapq_only}
 
-            $CONDA_PREFIX/bin/samtools sort -@ {threads} {output.bam_mapq_only} -o {output.bam_mapq_only_sorted}
-            $CONDA_PREFIX/bin/samtools index -@ {threads} -b {output.bam_mapq_only_sorted} {output.bam_mapq_only_sorted_index}
+            $CONDA_PREFIX/bin/samtools sort -@ {threads} {output.bam_mapq_only} -o {output.bam_mapq_only_sorted_toFix}
+            $CONDA_PREFIX/bin/samtools index -@ {threads} -b {output.bam_mapq_only_sorted_toFix} {output.bam_mapq_only_sorted_index_toFix}
+
+            $CONDA_PREFIX/bin/gatk FixMateInformation \
+            --INPUT {output.bam_mapq_only_sorted_toFix} \
+            --OUTPUT {output.bam_mapq_only_sorted} \
+            --ASSUME_SORTED false \
+            --ADD_MATE_CIGAR true \
+            --CREATE_INDEX true \
+            --VALIDATION_STRINGENCY LENIENT &> {log.fixmate_log}
 
             $CONDA_PREFIX/bin/samtools idxstats {output.bam_mapq_only_sorted} > {output.idxstats_file}
 
             printf '\033[1;36m{params.sample}: Removing MT from BAM...\\n\033[0m'
-            $CONDA_PREFIX/bin/samtools idxstats {output.bam_mapq_only_sorted} | cut -f 1 | grep -v -E '^chrM|^M' | xargs ${{CONDA_PREFIX}}/bin/samtools view -@ {threads} -b {output.bam_mapq_only_sorted} > {output.bam_mapq_only_sorted_woMT}
+            $CONDA_PREFIX/bin/samtools idxstats {output.bam_mapq_only_sorted} | cut -f 1 | grep -v -E '{params.chr_remove_pattern}' | xargs ${{CONDA_PREFIX}}/bin/samtools view -@ {threads} -b {output.bam_mapq_only_sorted} > {output.bam_mapq_only_sorted_woMT}
             $CONDA_PREFIX/bin/samtools index -@ {threads} -b {output.bam_mapq_only_sorted_woMT} {output.bam_mapq_only_sorted_woMT_index}
             """
 
@@ -210,11 +230,11 @@ if (eval(str(config["bam_features"]["skip_bam_filtering"])) == False):
     if (eval(str(config["bam_features"]["umi_present"])) == True):
         rule gatk4_markdups_umiAware:
             input:
-                bam_mapq_only_sorted = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(config["bam_features"]["MAPQ_threshold"]), "_sorted_woMT.bam"])),
-                bam_mapq_only_sorted_index = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(config["bam_features"]["MAPQ_threshold"]), "_sorted_woMT.bam.bai"]))
+                bam_mapq_only_sorted = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_sorted_woMT.bam"])),
+                bam_mapq_only_sorted_index = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_sorted_woMT.bam.bai"]))
             output:
-                bam_mdup = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(config["bam_features"]["MAPQ_threshold"]), "_", DUP, "_sorted.bam"])),
-                bai_mdup = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(config["bam_features"]["MAPQ_threshold"]), "_", DUP, "_sorted.bai"])),
+                bam_mdup = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_", DUP, "_sorted.bam"])),
+                bai_mdup = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_", DUP, "_sorted.bai"])),
                 umi_metrics = "01_BAM_filtered/umi_metrics/{SAMPLES}_UMI_metrics.txt",
                 dup_metrics = "01_BAM_filtered/MarkDuplicates_metrics/{SAMPLES}_MarkDuplicates_metrics.txt",
                 flagstat_filtered = os.path.join("01_BAM_filtered/flagstat/", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_", DUP, "_flagstat.txt"]))
@@ -254,8 +274,8 @@ if (eval(str(config["bam_features"]["skip_bam_filtering"])) == False):
     else: # Single-end/no-UMI dedup
         rule gatk4_markdups:
             input:
-                bam_mapq_only_sorted = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(config["bam_features"]["MAPQ_threshold"]), "_sorted_woMT.bam"])),
-                bam_mapq_only_sorted_index = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(config["bam_features"]["MAPQ_threshold"]), "_sorted_woMT.bam.bai"]))
+                bam_mapq_only_sorted = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_sorted_woMT.bam"])),
+                bam_mapq_only_sorted_index = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_sorted_woMT.bam.bai"]))
             output:
                 bam_mdup = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"])),
                 bai_mdup = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bai"])),
@@ -346,7 +366,7 @@ rule bam_shifting_and_RPM_normalization:
         maxFragmentLength = str(config["bam_features"]["maxFragmentLength"]),
         ignore_chr = '|'.join([re.sub('\..*$', '', i) for i in str(config["genomic_annotations"]["ignore_for_normalization"]).split(" ")])
     threads:
-        max(math.floor(workflow.cores/len(BAMS)), 1)
+        max(math.floor(workflow.cores/2), 1)
     log:
         out = "03_Normalization/RPM_normalized/bamToBed_log/{SAMPLES}_bamToBed.log"
     benchmark:
@@ -364,7 +384,7 @@ rule bam_shifting_and_RPM_normalization:
         $CONDA_PREFIX/bin/samtools view -@ {threads} -b -f 3 {output.dedup_BAM_sortedByName} | bedtools bamtobed -i stdin -cigar -bedpe > {output.dedup_BEDPE_sortedByName} 2> {log.out}
 
         printf '\033[1;36m{params.sample}: Shifting read fragments...\\n\033[0m'
-        awk -v OFS='\\t' '{{if($9=="+"){{print $1,$2+4,$6-5,$7,1,$9}}else if($9=="-"){{print $1,$2-5,$6+4,$7,1,$9}}}}' {output.dedup_BEDPE_sortedByName} > {output.dedup_BED_sortedByName_shifted}
+        awk -v OFS='\\t' '{{if($9=="+"){{print $1,$2+4,$6-5,$7,1,$9}}else if($9=="-"){{print $1,$2-5,$6+4,$7,1,$9}}}}' {output.dedup_BEDPE_sortedByName} | awk '(($3 >= $2))' > {output.dedup_BED_sortedByName_shifted}
         sort -k1,1 -k2,2n {output.dedup_BED_sortedByName_shifted} | grep '+' > {output.dedup_BED_sortedByPos_shifted}
 
         printf '\033[1;36m{params.sample}: Filter blacklist and fragmentSize...\\n\033[0m'
@@ -417,7 +437,7 @@ if (eval(str(config["bam_features"]["skip_bam_filtering"])) == False):
             multiqcReportBAM = os.path.join(SUMMARYDIR, ''.join(["multiQC_", DUP, "_bams/multiQC_report_BAMs_", DUP, ".html"]))
         params:
             fastQC_BAM_reports_dir = "02_BAM_fastQC/",
-            picard_metrics_dir = "01_BAM_filtered/metrics/",
+            picard_metrics_dir = "01_BAM_filtered/MarkDuplicates_metrics/",
             dedup_BAM_flagstat_dir = "01_BAM_filtered/flagstat/",
             macs_dir = PEAKSDIR,
             multiQC_BAM_outdir = os.path.join(config["workflow_configuration"]["output_directory"], SUMMARYDIR, ''.join(["multiQC_", DUP, "_bams/"]))
@@ -521,16 +541,35 @@ rule fragment_size_distribution_report:
     input:
         plots = expand(os.path.join(SUMMARYDIR, "fragmentSizeDistribution_plots/{sample}_fragment_size_distribution.pdf"), sample = SAMPLENAMES)
     output:
-        report_pdf = os.path.join(SUMMARYDIR, "fragmentSizeDistribution_plots/ALL.SAMPLES_fragmentSizeDistribution_plots.pdf")
+        replot_script = temp(os.path.join(SUMMARYDIR, "fragmentSizeDistribution_plots/replot_script.R")),
+        report_pdf = os.path.join(SUMMARYDIR, "fragmentSizeDistribution_plots/ALL.SAMPLES_fragmentSizeDistribution_plots.pdf"),
+        report_ggplot = os.path.join(SUMMARYDIR, "fragmentSizeDistribution_plots/ALL.SAMPLES_fragmentSizeDistribution_plots_ggplot.version.pdf")
     params:
-        distribution_plots_pattern = os.path.join(SUMMARYDIR, "fragmentSizeDistribution_plots/*_fragment_size_distribution.pdf")
+        distribution_plots_pattern = os.path.join(SUMMARYDIR, "fragmentSizeDistribution_plots/*_fragment_size_distribution.pdf"),
+        dir = os.path.join(home_dir,""),
+        summary_dir = SUMMARYDIR,
+        maxFragmentLength = config["bam_features"]["maxFragmentLength"]
     threads: 1
+    log:
+      ggplot = os.path.join(SUMMARYDIR, "fragmentSizeDistribution_plots/log/ggplot_replotting.log"),
+      pdfcombine = os.path.join(SUMMARYDIR, "fragmentSizeDistribution_plots/log/pdfcombine.log")
     benchmark:
         "benchmarks/fragment_size_distribution_report/fragment_size_distribution_report---benchmark.txt"
     shell:
         """
         printf '\033[1;36mMerging fragmentSizeDistribution reports in a unique PDF...\\n\033[0m'
-        $CONDA_PREFIX/bin/pdfcombine {params.distribution_plots_pattern} -o {output.report_pdf} -sf
+        $CONDA_PREFIX/bin/pdfcombine {params.distribution_plots_pattern} -o {output.report_pdf} -sf &> {log.pdfcombine}
+
+
+        printf '\033[1;36mReplotting fragmentSizeDistribution reports in R (ggplot version)...\\n\033[0m'
+        echo "tb = do.call(rbind, lapply(list.files('{params.dir}{params.summary_dir}fragmentSizeDistribution_plots/table_and_fragmentSize', pattern = 'RawFragmentLengths', full.names = T), function(x)(read.delim(x, h=T, skip=1))))" > {output.replot_script}
+        echo "n.samples = length(unique(tb[,3]))" >> {output.replot_script}
+        echo "plot = ggplot2::ggplot(data = tb, ggplot2::aes(x = Size, y = Occurrences, color = Sample)) + ggplot2::geom_smooth(method = 'loess', formula = y ~ x, span = 0.05, show.legend = F, se = F, color = 'navyblue', linewidth = 0.5) + ggplot2::xlim(c(1,{params.maxFragmentLength})) + ggplot2::theme_classic() + ggplot2::facet_wrap(~Sample, scale='free', ncol = floor(sqrt(n.samples))) + ggplot2::theme(axis.ticks = ggplot2::element_line(color ='black'), axis.text = ggplot2::element_text(color = 'black'), strip.background = ggplot2::element_blank())" >> {output.replot_script}
+        echo "pdf(file = '{params.dir}{output.report_ggplot}', width = floor(sqrt(n.samples)) * 2.7, height = ceiling(n.samples / floor(sqrt(n.samples))) * 1.5)" >> {output.replot_script}
+        echo "print(plot)" >> {output.replot_script}
+        echo "invisible(dev.off())" >> {output.replot_script}
+
+        $CONDA_PREFIX/bin/Rscript {output.replot_script} &> {log.ggplot}
         """
 # ----------------------------------------------------------------------------------------
 
@@ -548,7 +587,7 @@ rule peakCalling_MACS3:
         summits = os.path.join(PEAKSDIR, ''.join(["{SAMPLES}_mapq", MAPQ, "_woMT_",DUP,"_qValue", str(config["peak_calling"]["qValue_cutoff"]), "_summits.bed"]))
     params:
         genomeSize = str(config["genomic_annotations"]["effective_genomeSize"]),
-        blacklist = config["blacklist_file"],
+        blacklist = BLACKLIST,
         peak_caller = PEAKCALLER.lower(),
         peaks_dir = PEAKSDIR,
         qValue = str(config["peak_calling"]["qValue_cutoff"]),
@@ -624,7 +663,7 @@ rule counts_summary:
             shiftedBEDPE=$((halfShiftedBEDPE + halfShiftedBEDPE))
             lossReads=$((dedupBAM - shiftedBEDPE))
 
-            peaks=$(wc -l {params.peaks_dir}${{NAME}}*.*Peak | cut -f 1 -d ' ')
+            peaks=$(wc -l {params.peaks_dir}${{NAME}}*_peaks.narrowPeak | cut -f 1 -d ' ')
 
             awk 'BEGIN{{FS=OFS="\\t"; print "GeneID\\tChr\\tStart\\tEnd\\tStrand"}}{{print $4, $1, $2+1, $3, "."}}' {params.peaks_dir}${{NAME}}*.*Peak > {params.peaks_dir}${{NAME}}.saf
             FEATURECOUNTSLOG={params.build_summary_directory}/Counts/subread_featureCounts_output/${{NAME}}/${{NAME}}.readCountInPeaks.log
@@ -643,23 +682,23 @@ rule counts_summary:
 
 
 
-# Add chr to peak_suffix
-rule add_chr_to_peaks:
-    input:
-        peaks = os.path.join(PEAKSDIR, ''.join(["{SAMPLES}_mapq", MAPQ, "_woMT_", DUP, "_qValue", str(config["peak_calling"]["qValue_cutoff"]), "_peaks.narrowPeak"])),
-        summary_file = os.path.join(SUMMARYDIR, "Counts/counts_summary.txt"),
-        concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")
-    output:
-        peaks_chr = os.path.join(PEAKSDIR, ''.join(["{SAMPLES}_mapq", MAPQ, "_woMT_", DUP, "_qValue", str(config["peak_calling"]["qValue_cutoff"]), "_peaks_chr.narrowPeak"]))
-    params:
-        blacklist = BLACKLIST
-    threads: 1
-    benchmark:
-        "benchmarks/add_chr_to_peaks/add_chr_to_peaks---{SAMPLES}_benchmark.txt"
-    shell:
-        """
-        $CONDA_PREFIX/bin/bedtools subtract -nonamecheck -a {input.peaks} -b {params.blacklist} | awk '{{if (length($1) <3 && $1 !="MT"){{print "chr"$0}} else {{print $0}} }}' > {output.peaks_chr}
-        """
+# # # Add chr to peak_suffix
+# rule add_chr_to_peaks:
+#     input:
+#         peaks = os.path.join(PEAKSDIR, ''.join(["{SAMPLES}_mapq", MAPQ, "_woMT_", DUP, "_qValue", str(config["peak_calling"]["qValue_cutoff"]), "_peaks.narrowPeak"])),
+#         summary_file = os.path.join(SUMMARYDIR, "Counts/counts_summary.txt"),
+#         concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")
+#     output:
+#         peaks_chr = os.path.join(PEAKSDIR, ''.join(["{SAMPLES}_mapq", MAPQ, "_woMT_", DUP, "_qValue", str(config["peak_calling"]["qValue_cutoff"]), "_peaks_chr.narrowPeak"]))
+#     params:
+#         blacklist = BLACKLIST
+#     threads: 1
+#     benchmark:
+#         "benchmarks/add_chr_to_peaks/add_chr_to_peaks---{SAMPLES}_benchmark.txt"
+#     shell:
+#         """
+#         $CONDA_PREFIX/bin/bedtools subtract -nonamecheck -a {input.peaks} -b {params.blacklist} | awk '{{if (length($1) <3 && $1 !="MT"){{print "chr"$0}} else {{print $0}} }}' > {output.peaks_chr}
+#         """
 
 
 
@@ -699,8 +738,11 @@ rule PCA_and_samples_correlation:
     output:
         PCA_OneTwo = os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/PCA1.2_on_BigWigs_wholeGenome.pdf"),
         PCA_TwoThree = os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/PCA2.3_on_BigWigs_wholeGenome.pdf"),
+        PCA_tab = os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/PCA_on_BigWigs_wholeGenome_values.txt"),
         hetamap_spearman = os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/Correlation_heatmap_on_BigWigs_wholeGenome_spearmanMethod.pdf"),
         hetamap_pearson = os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/Correlation_heatmap_on_BigWigs_wholeGenome_pearsonMethod.pdf"),
+        matrix_spearman = os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/Correlation_matrix_on_BigWigs_wholeGenome_spearmanMethod.txt"),
+        matrix_pearson = os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/Correlation_matrix_on_BigWigs_wholeGenome_pearsonMethod.txt"),
         scatterplot_spearman = os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/Correlation_scatterplot_on_BigWigs_wholeGenome_spearmanMethod.pdf"),
         scatterplot_pearson = os.path.join(SUMMARYDIR, "Sample_comparisons/Sample_correlation/Correlation_scatterplot_on_BigWigs_wholeGenome_pearsonMethod.pdf")
     params:
@@ -714,12 +756,12 @@ rule PCA_and_samples_correlation:
 
         mkdir -p {params.make_directory}
 
-        printf '\033[1;36m    - plotting PCAs...\\n\033[0m'
-        $CONDA_PREFIX/bin/plotPCA -in {input.matrix} -o {output.PCA_OneTwo} -T 'PCA on BigWigs (whole genome)' --plotFileFormat 'pdf'
+        printf '\033[1;36m    - plotting PCAs (whole genome)...\\n\033[0m'
+        $CONDA_PREFIX/bin/plotPCA -in {input.matrix} -o {output.PCA_OneTwo} -T 'PCA on BigWigs (whole genome)' --plotFileFormat 'pdf' --outFileNameData {output.PCA_tab}
         $CONDA_PREFIX/bin/plotPCA -in {input.matrix} -o {output.PCA_TwoThree} -T 'PCA on BigWigs (whole genome)' --plotFileFormat 'pdf' --PCs 2 3
 
 
-        printf '\033[1;36m    - plotting Spearman correlation heatmap...\\n\033[0m'
+        printf '\033[1;36m    - plotting Spearman correlation heatmap (whole genome)...\\n\033[0m'
         $CONDA_PREFIX/bin/plotCorrelation -in {input.matrix} \
         --corMethod spearman \
         --skipZeros \
@@ -729,9 +771,10 @@ rule PCA_and_samples_correlation:
         --colorMap {params.heatmap_color} \
         --plotNumbers \
         --plotFileFormat 'pdf' \
+        --outFileCorMatrix {output.matrix_spearman} \
         -o {output.hetamap_spearman}
 
-        printf '\033[1;36m    - plotting Pearson correlation heatmap...\\n\033[0m'
+        printf '\033[1;36m    - plotting Pearson correlation heatmap (whole genome)...\\n\033[0m'
         $CONDA_PREFIX/bin/plotCorrelation -in {input.matrix} \
         --corMethod pearson \
         --skipZeros \
@@ -741,11 +784,12 @@ rule PCA_and_samples_correlation:
         --colorMap {params.heatmap_color} \
         --plotNumbers \
         --plotFileFormat 'pdf' \
+        --outFileCorMatrix {output.matrix_pearson} \
         -o {output.hetamap_pearson}
 
 
 
-        printf '\033[1;36m    - plotting Spearman correlation scatterplot...\\n\033[0m'
+        printf '\033[1;36m    - plotting Spearman correlation scatterplot (whole genome)...\\n\033[0m'
         $CONDA_PREFIX/bin/plotCorrelation -in {input.matrix} \
         --corMethod spearman \
         --log1p \
@@ -758,7 +802,7 @@ rule PCA_and_samples_correlation:
         --plotFileFormat 'pdf' \
         -o {output.scatterplot_spearman}
 
-        printf '\033[1;36m    - plotting Pearson correlation scatterplot...\\n\033[0m'
+        printf '\033[1;36m    - plotting Pearson correlation scatterplot (whole genome)...\\n\033[0m'
         $CONDA_PREFIX/bin/plotCorrelation -in {input.matrix} \
         --corMethod pearson \
         --log1p \
@@ -778,34 +822,72 @@ rule PCA_and_samples_correlation:
 # Generation of Lorenz curves
 rule Lorenz_curve:
     input:
-        dedup_bam_sorted = expand(os.path.join("01_BAM_filtered", ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"])), sample=SAMPLENAMES),
-        dedup_bam_sorted_index = expand(os.path.join("01_BAM_filtered", ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bai"])), sample=SAMPLENAMES)
+        dedup_bam_sorted = os.path.join("01_BAM_filtered", ''.join(["{SAMPLE}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"])),
+        dedup_bam_sorted_index = os.path.join("01_BAM_filtered", ''.join(["{SAMPLE}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bai"]))
     output:
-        lorenz_plot = os.path.join(SUMMARYDIR, "Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf")
+        lorenz_plot = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/lorenz_plots/{SAMPLE}_Lorenz_curve_deeptools.plotFingreprint.pdf"),
+        lorenz_metrics = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/lorenz_metrics/{SAMPLE}_Lorenz_quality.metrics_deeptools.plotFingreprint.txt"),
+        lorenz_counts = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/lorenz_counts/{SAMPLE}_Lorenz_raw.counts_deeptools.plotFingreprint.txt")
     params:
-        all_bams = ' '.join(expand(os.path.join(''.join(["01_BAM_filtered/{sample}_mapq", MAPQ ,"_sorted_woMT_", DUP, ".bam"])), sample=SAMPLENAMES)),
-        labels = ' '.join(SAMPLENAMES),
+        #all_bams = ' '.join(expand(os.path.join(''.join(["01_BAM_filtered/{sample}_mapq", MAPQ ,"_sorted_woMT_", DUP, ".bam"])), sample=SAMPLENAMES)),
+        #labels = ' '.join(SAMPLENAMES),
+        labels = str("{SAMPLE}"),
         blacklist = BLACKLIST,
         binSize = config["quality_controls"]["plotFingerprint"]["binSize"],
         sampledRegions = config["quality_controls"]["plotFingerprint"]["sampledRegions"],
         extra_params = config["quality_controls"]["plotFingerprint"]["extra_parameters"]
     threads:
-        max((workflow.cores-1), 1)
+        max(math.floor((workflow.cores-1)/2), 1)
+    log:
+        out = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/log/{SAMPLE}_deeptools_plotFingreprint.log")
     benchmark:
-        "benchmarks/Lorenz_curve/Lorenz_curve---benchmark.txt"
+        "benchmarks/Lorenz_curve/Lorenz_curve---{SAMPLE}_benchmark.txt"
     priority: -10
     shell:
         """
-        printf '\033[1;36mPlotting the Lorenz curves-Fingerprint for all samples...\\n\033[0m'
+        printf '\033[1;36m{params.labels}: plotting Lorenz curves-Fingerprint...\\n\033[0m'
 
         $CONDA_PREFIX/bin/plotFingerprint \
-        --bamfiles {params.all_bams} \
+        --bamfiles {input.dedup_bam_sorted} \
         --plotFile {output.lorenz_plot} \
         --labels {params.labels} \
         --blackListFileName {params.blacklist} \
         --binSize {params.binSize} \
-        --numberOfSamples {params.sampledRegions}\
-        -p {threads} {params.extra_params}
+        --numberOfSamples {params.sampledRegions} \
+        --outQualityMetrics {output.lorenz_metrics} \
+        --outRawCounts {output.lorenz_counts} \
+        -p {threads} {params.extra_params} &> {log.out}
+        """
+
+
+rule Lorenz_curve_merge_plots:
+    input:
+        lorenz_plots = expand(os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/lorenz_plots/{sample}_Lorenz_curve_deeptools.plotFingreprint.pdf"), sample=SAMPLENAMES)
+    output:
+        lorenz_plot = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/Lorenz_curve_deeptools.plotFingreprint_allSamples_combined.pdf"),
+        lorenz_plot_ggplot = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf")
+    params:
+        lorenz_plots_pattern = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/lorenz_plots/*_Lorenz_curve_deeptools.plotFingreprint.pdf"),
+        dir = os.path.join(home_dir,""),
+        summary_dir = SUMMARYDIR,
+    threads: 1
+    benchmark:
+        "benchmarks/Lorenz_curve/Lorenz_curve_merge_plots---benchmark.txt"
+    priority: -5
+    shell:
+        """
+        printf '\033[1;36mCombine Lorenz curves-Fingerprint for all samples...\\n\033[0m'
+        $CONDA_PREFIX/bin/pdfcombine {params.lorenz_plots_pattern} -o {output.lorenz_plot} -sf
+
+        printf '\033[1;36mMake combined Lorenz curves-Fingerprint plot...\\n\033[0m'
+        $CONDA_PREFIX/bin/Rscript \
+        -e "require(dplyr)" \
+        -e "tables = list.files(path = '{params.dir}06_Overall_quality_and_info/LorenzCurve_plotFingreprint/lorenz_counts', pattern = '.plotFingreprint.txt', full.names = T)" \
+        -e "combined_table = data.frame()" \
+        -e "for (i in 1:length(tables)) (combined_table = rbind(combined_table, dplyr::mutate(read.delim(tables[i], skip = 2, h=F), sample = gsub('_Lorenz_raw[.]counts_deeptools[.]plotFingreprint[.]txt','',basename(tables[i]))) %>% dplyr::rename(counts = V1) %>% dplyr::arrange(counts) %>% dplyr::mutate(cumulative_sum = cumsum(counts), rank = (1:nrow(.))/nrow(.)) %>% dplyr::mutate(cumulative_sum = cumulative_sum/max(cumulative_sum))))" \
+        -e "pdf('{params.dir}{output.lorenz_plot_ggplot}', width = 8, height = 6.5)" \
+        -e "ggplot2::ggplot(data = combined_table, ggplot2::aes(x = rank, y = cumulative_sum, color = sample)) + ggplot2::geom_line() + ggplot2::ggtitle('Fingerprints (Lorenz curves) all samples') + ggplot2::xlim(c(0,1)) + ggplot2::xlab('Normalized rank') + ggplot2::ylab('Fraction with reference to the bin with highest coverage') + ggplot2::theme_classic() + ggplot2::theme(axis.text = ggplot2::element_text(color = 'black'), axis.ticks = ggplot2::element_line(color = 'black'))" \
+        -e "invisible(dev.off())"
         """
 # ----------------------------------------------------------------------------------------
 
@@ -945,7 +1027,8 @@ rule generate_copywriteR_genome_map:
     params:
         data_folder = os.path.join(home_dir, COPYWRITERDIR),
         resolution = str(config["copy_number_variation"]["kb_bin_resolution"]),
-        genome = genome_id
+        genome = genome_id,
+        chr_prefix = config["copy_number_variation"]["chromosome_prefix"]
     log:
         out = os.path.join(COPYWRITERDIR, "logs/genome_mappability_file_generation_copywriteR.log")
     benchmark:
@@ -1279,8 +1362,11 @@ rule peaks_correlation_and_PCA_at_peaks:
     output:
         PCA_OneTwo = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/PCA/PCA1.2_on_BigWigs_peakUnion.pdf"),
         PCA_TwoThree = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/PCA/PCA2.3_on_BigWigs_peakUnion.pdf"),
+        PCA_tab = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/PCA/PCA_on_BigWigs_peakUnion_values.txt"),
         hetamap_spearman = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/Correlations/Correlation_heatmap_on_BigWigs_peakUnion_spearmanMethod.pdf"),
         hetamap_pearson = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/Correlations/Correlation_heatmap_on_BigWigs_peakUnion_pearsonMethod.pdf"),
+        matrix_spearman = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/Correlations/Correlation_matrix_on_BigWigs_peakUnion_spearmanMethod.txt"),
+        matrix_pearson = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/Correlations/Correlation_matrix_on_BigWigs_peakUnion_pearsonMethod.txt"),
         scatterplot_spearman = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/Correlations/Correlation_scatterplot_on_BigWigs_peakUnion_spearmanMethod.pdf"),
         scatterplot_pearson = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/Correlations/Correlation_scatterplot_on_BigWigs_peakUnion_pearsonMethod.pdf")
     params:
@@ -1296,12 +1382,12 @@ rule peaks_correlation_and_PCA_at_peaks:
         mkdir -p {params.make_directory_corr}
         mkdir -p {params.make_directory_PCA}
 
-        printf '\033[1;36m    - plotting PCAs...\\n\033[0m'
-        $CONDA_PREFIX/bin/plotPCA -in {input.matrix} -o {output.PCA_OneTwo} -T 'PCA on BigWigs (peak union)' --plotFileFormat 'pdf'
+        printf '\033[1;36m    - plotting PCAs (at peaks)...\\n\033[0m'
+        $CONDA_PREFIX/bin/plotPCA -in {input.matrix} -o {output.PCA_OneTwo} -T 'PCA on BigWigs (peak union)' --plotFileFormat 'pdf' --outFileNameData {output.PCA_tab}
         $CONDA_PREFIX/bin/plotPCA -in {input.matrix} -o {output.PCA_TwoThree} -T 'PCA on BigWigs (peak union)' --plotFileFormat 'pdf' --PCs 2 3
 
 
-        printf '\033[1;36m    - plotting Spearman correlation heatmap...\\n\033[0m'
+        printf '\033[1;36m    - plotting Spearman correlation heatmap (at peaks)...\\n\033[0m'
         $CONDA_PREFIX/bin/plotCorrelation -in {input.matrix} \
         --corMethod spearman \
         --skipZeros \
@@ -1311,9 +1397,10 @@ rule peaks_correlation_and_PCA_at_peaks:
         --colorMap {params.heatmap_color} \
         --plotNumbers \
         --plotFileFormat 'pdf' \
+        --outFileCorMatrix {output.matrix_spearman} \
         -o {output.hetamap_spearman}
 
-        printf '\033[1;36m    - plotting Pearson correlation heatmap...\\n\033[0m'
+        printf '\033[1;36m    - plotting Pearson correlation heatmap (at peaks)...\\n\033[0m'
         $CONDA_PREFIX/bin/plotCorrelation -in {input.matrix} \
         --corMethod pearson \
         --skipZeros \
@@ -1323,11 +1410,12 @@ rule peaks_correlation_and_PCA_at_peaks:
         --colorMap {params.heatmap_color} \
         --plotNumbers \
         --plotFileFormat 'pdf' \
+        --outFileCorMatrix {output.matrix_pearson} \
         -o {output.hetamap_pearson}
 
 
 
-        printf '\033[1;36m    - plotting Spearman correlation scatterplot...\\n\033[0m'
+        printf '\033[1;36m    - plotting Spearman correlation scatterplot (at peaks)...\\n\033[0m'
         $CONDA_PREFIX/bin/plotCorrelation -in {input.matrix} \
         --corMethod spearman \
         --log1p \
@@ -1340,7 +1428,7 @@ rule peaks_correlation_and_PCA_at_peaks:
         --plotFileFormat 'pdf' \
         -o {output.scatterplot_spearman}
 
-        printf '\033[1;36m    - plotting Pearson correlation scatterplot...\\n\033[0m'
+        printf '\033[1;36m    - plotting Pearson correlation scatterplot (at peaks)...\\n\033[0m'
         $CONDA_PREFIX/bin/plotCorrelation -in {input.matrix} \
         --corMethod pearson \
         --log1p \
@@ -1397,149 +1485,221 @@ rule TOBIAS_ATACorrect:
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>  VARIANT CALLING  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-# Create reference genome dictionary
-rule make_reference_genome_dictionary:
-    input:
-        genome = ancient(genome_fasta)
-    output:
-        genome_dict = ''.join([re.sub("[.]([a-z]|[A-Z])*$", "",genome_fasta),'.dict'])
-    benchmark:
-        "benchmarks/make_reference_genome_dictionary/make_reference_genome_dictionary---benchmark.txt"
-    shell:
-        """
-        printf '\033[1;36mGenerating genome dictionary...\\n\033[0m'
+# if the BSQR must be skipped
+if (eval(str(config["somatic_variants"]["skip_base_quality_recalibration"]))):
+    # compute the coverage
+    rule plotCoverage_merged_peaks:
+        input:
+            target_bam_bsqr = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"])),
+            concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")
+        output:
+            coverage_plot = os.path.join(GATKDIR, "coverage_plots/{SAMPLES}_plotCoverage.pdf")
+        params:
+            label = "{SAMPLES}",
+            blacklist = BLACKLIST
+        threads:
+            max(math.floor(workflow.cores/len(SAMPLENAMES)), 1)
+        log:
+            out = os.path.join(GATKDIR, "coverage_plots/logs/{SAMPLES}_plotCoverage.log")
+        benchmark:
+            "benchmarks/plotCoverage_merged_peaks/plotCoverage_merged_peaks---{SAMPLES}_benchmark.txt"
+        shell:
+            """
+            printf '\033[1;36m{params.label}: Plotting coverage at ChIP (merged) peaks...\\n\033[0m'
 
-        $CONDA_PREFIX/bin/gatk CreateSequenceDictionary REFERENCE={input.genome} OUTPUT={output.genome_dict}
-        """
-# ----------------------------------------------------------------------------------------
+            $CONDA_PREFIX/bin/plotCoverage \
+            --bamfiles {input.target_bam_bsqr} \
+            --labels {params.label} \
+            --BED {input.concatenation_bed_collapsed_sorted} \
+            --blackListFileName {params.blacklist} \
+            --plotFile {output.coverage_plot} \
+            --plotTitle {params.label} \
+            --numberOfProcessors {threads} &> {log.out}
+            """
+
+    # ----------------------------------------------------------------------------------------
+
+    # run gatk haplotype caller
+    rule GATK_haplotype_calling:
+        input:
+            concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed"),
+            target_bam_bsqr = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"])),
+            target_bam_bsqr_index = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bai"]))
+        params:
+            genome = genome_fasta,
+            sample = "{SAMPLES}",
+            to_copy_bed = os.path.join(GATKDIR, "all_samples_peak_concatenation_collapsed_sorted.bed")
+        output:
+            gvcf = temp(os.path.join(GATKDIR, ''.join(["VCF/{SAMPLES}_", DUP, "_gatk.g.vcf.gz"]))),
+            gvcf_idx = temp(os.path.join(GATKDIR, ''.join(["VCF/{SAMPLES}_", DUP, "_gatk.g.vcf.gz.tbi"])))
+        threads:
+            max(math.floor(workflow.cores/2), 1)
+        log:
+            out = os.path.join(GATKDIR, "VCF/logs/{SAMPLES}_HaplotypeCaller.log")
+        benchmark:
+            "benchmarks/GATK_haplotype_calling/GATK_haplotype_calling---{SAMPLES}_benchmark.txt"
+        shell:
+            """
+            cp {input.concatenation_bed_collapsed_sorted} {params.to_copy_bed}
+
+            printf '\033[1;36m{params.sample}: GATK Haplotype calling...\\n\033[0m'
+
+            $CONDA_PREFIX/bin/gatk HaplotypeCaller \
+            -L {input.concatenation_bed_collapsed_sorted} \
+            -R {params.genome} \
+            -I {input.target_bam_bsqr} \
+            -O {output.gvcf} \
+            -ERC GVCF \
+            -G StandardAnnotation \
+            -G AS_StandardAnnotation \
+            -G StandardHCAnnotation &> {log.out}
+            """
+
+# if BSQR required
+else:
+    # Create reference genome dictionary
+    rule make_reference_genome_dictionary:
+        input:
+            genome = ancient(genome_fasta)
+        output:
+            genome_dict = ''.join([re.sub("[.]([a-z]|[A-Z])*$", "",genome_fasta),'.dict'])
+        benchmark:
+            "benchmarks/make_reference_genome_dictionary/make_reference_genome_dictionary---benchmark.txt"
+        shell:
+            """
+            printf '\033[1;36mGenerating genome dictionary...\\n\033[0m'
+
+            $CONDA_PREFIX/bin/gatk CreateSequenceDictionary REFERENCE={input.genome} OUTPUT={output.genome_dict}
+            """
+    # ----------------------------------------------------------------------------------------
 
 
-# run base score recalibration (BSQR) of the bams
-rule GATK_bam_base_quality_score_recalibration:
-    input:
-        genome_dict = ancient(''.join([re.sub("[.]([a-z]|[A-Z])*$", "",genome_fasta),'.dict'])),
-        target_bam = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"])),
-        target_bai = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bai"])),
-    output:
-        target_bam_withRG = temp(os.path.join(GATKDIR, "recalibrated_bams", ''.join(["{SAMPLES}_mapq", str(config["bam_features"]["MAPQ_threshold"]), "_", DUP, "_sorted_withRG.bam"]))),
-        bsqr_table = os.path.join(GATKDIR, "recalibrated_bams", ''.join(["bsqr_tables/{SAMPLES}_mapq", str(config["bam_features"]["MAPQ_threshold"]), "_sorted_woMT_", DUP, "_bsqr.table"])),
-        target_bam_bsqr = os.path.join(GATKDIR, "recalibrated_bams", ''.join(["{SAMPLES}_mapq", str(config["bam_features"]["MAPQ_threshold"]), "_sorted_woMT_", DUP, "_bsqr.bam"])),
-        target_bam_bsqr_index = os.path.join(GATKDIR, "recalibrated_bams", ''.join(["{SAMPLES}_mapq", str(config["bam_features"]["MAPQ_threshold"]), "_sorted_woMT_", DUP, "_bsqr.bai"]))
-    params:
-        sample = "{SAMPLES}",
-        gatk_directory = GATKDIR,
-        genome = genome_fasta,
-        dbsnp = config["somatic_variants"]["dbsnp_file"]
-    log:
-        readGroup_log = os.path.join(GATKDIR, "recalibrated_bams/logs/{SAMPLES}_addReadGroup.log"),
-        BaseRecalibrator_log = os.path.join(GATKDIR, "recalibrated_bams/logs/{SAMPLES}_BaseRecalibrator.log"),
-        ApplyBQSR_log = os.path.join(GATKDIR, "recalibrated_bams/logs/{SAMPLES}_ApplyBQSR.log")
-    threads:
-        max(math.floor(workflow.cores/2), 1)
-    benchmark:
-        "benchmarks/GATK_bam_base_quality_score_recalibration/GATK_bam_base_quality_score_recalibration---{SAMPLES}_benchmark.txt"
-    shell:
-        """
-        printf '\033[1;36m{params.sample}: Adding Read Groups to filtered bams...\\n\033[0m'
+    # run base score recalibration (BSQR) of the bams
+    rule GATK_bam_base_quality_score_recalibration:
+        input:
+            genome_dict = ancient(''.join([re.sub("[.]([a-z]|[A-Z])*$", "",genome_fasta),'.dict'])),
+            target_bam = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"])),
+            target_bai = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bai"])),
+        output:
+            target_bam_withRG = temp(os.path.join(GATKDIR, "recalibrated_bams", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_", DUP, "_sorted_withRG.bam"]))),
+            bsqr_table = os.path.join(GATKDIR, "recalibrated_bams", ''.join(["bsqr_tables/{SAMPLES}_mapq", str(MAPQ), "_sorted_woMT_", DUP, "_bsqr.table"])),
+            target_bam_bsqr = os.path.join(GATKDIR, "recalibrated_bams", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_sorted_woMT_", DUP, "_bsqr.bam"])),
+            target_bam_bsqr_index = os.path.join(GATKDIR, "recalibrated_bams", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_sorted_woMT_", DUP, "_bsqr.bai"]))
+        params:
+            sample = "{SAMPLES}",
+            gatk_directory = GATKDIR,
+            genome = genome_fasta,
+            dbsnp = config["somatic_variants"]["dbsnp_file"]
+        log:
+            readGroup_log = os.path.join(GATKDIR, "recalibrated_bams/logs/{SAMPLES}_addReadGroup.log"),
+            BaseRecalibrator_log = os.path.join(GATKDIR, "recalibrated_bams/logs/{SAMPLES}_BaseRecalibrator.log"),
+            ApplyBQSR_log = os.path.join(GATKDIR, "recalibrated_bams/logs/{SAMPLES}_ApplyBQSR.log")
+        threads:
+            max(math.floor(workflow.cores/2), 1)
+        benchmark:
+            "benchmarks/GATK_bam_base_quality_score_recalibration/GATK_bam_base_quality_score_recalibration---{SAMPLES}_benchmark.txt"
+        shell:
+            """
+            printf '\033[1;36m{params.sample}: Adding Read Groups to filtered bams...\\n\033[0m'
 
-        $CONDA_PREFIX/bin/gatk AddOrReplaceReadGroups \
-        -I {input.target_bam} \
-        -O {output.target_bam_withRG} \
-        -RGID 1 \
-        -RGLB lib1 \
-        -RGPL illumina \
-        -RGPU unit1 \
-        -RGSM {params.sample} &> {log.readGroup_log}
-
-
-        printf '\033[1;36m{params.sample}: Base Quality Score Recalibration of the deduplicated bam...\\n\033[0m'
-
-        $CONDA_PREFIX/bin/gatk BaseRecalibrator \
-        --input {output.target_bam_withRG} \
-        --known-sites {params.dbsnp} \
-        --output {output.bsqr_table} \
-        --reference {params.genome} &> {log.BaseRecalibrator_log}
-
-        $CONDA_PREFIX/bin/gatk ApplyBQSR \
-        -R {params.genome} \
-        -I {output.target_bam_withRG} \
-        --bqsr-recal-file {output.bsqr_table} \
-        -O {output.target_bam_bsqr} &> {log.ApplyBQSR_log}
-
-        printf '\033[1;36m{params.sample}: Indexing recalibrated bam...\\n\033[0m'
-        $CONDA_PREFIX/bin/samtools index -@ {threads} -b {output.target_bam_bsqr} {output.target_bam_bsqr_index}
-        """
-
-# ----------------------------------------------------------------------------------------
+            $CONDA_PREFIX/bin/gatk AddOrReplaceReadGroups \
+            -I {input.target_bam} \
+            -O {output.target_bam_withRG} \
+            -RGID 1 \
+            -RGLB lib1 \
+            -RGPL illumina \
+            -RGPU unit1 \
+            -RGSM {params.sample} &> {log.readGroup_log}
 
 
-# compute the coverage
-rule plotCoverage_merged_peaks:
-    input:
-        target_bam_bsqr = os.path.join(GATKDIR, "recalibrated_bams", ''.join(["{SAMPLES}_mapq", str(config["bam_features"]["MAPQ_threshold"]), "_sorted_woMT_", DUP, "_bsqr.bam"])),
-        concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")
-    output:
-        coverage_plot = os.path.join(GATKDIR, "coverage_plots/{SAMPLES}_plotCoverage.pdf")
-    params:
-        label = "{SAMPLES}",
-        blacklist = BLACKLIST
-    threads:
-        max(math.floor(workflow.cores/len(SAMPLENAMES)), 1)
-    log:
-        out = os.path.join(GATKDIR, "coverage_plots/logs/{SAMPLES}_plotCoverage.log")
-    benchmark:
-        "benchmarks/plotCoverage_merged_peaks/plotCoverage_merged_peaks---{SAMPLES}_benchmark.txt"
-    shell:
-        """
-        printf '\033[1;36m{params.label}: Plotting coverage at ChIP (merged) peaks...\\n\033[0m'
+            printf '\033[1;36m{params.sample}: Base Quality Score Recalibration of the deduplicated bam...\\n\033[0m'
 
-        $CONDA_PREFIX/bin/plotCoverage \
-        --bamfiles {input.target_bam_bsqr} \
-        --labels {params.label} \
-        --BED {input.concatenation_bed_collapsed_sorted} \
-        --blackListFileName {params.blacklist} \
-        --plotFile {output.coverage_plot} \
-        --plotTitle {params.label} \
-        --numberOfProcessors {threads} &> {log.out}
-        """
+            $CONDA_PREFIX/bin/gatk BaseRecalibrator \
+            --input {output.target_bam_withRG} \
+            --known-sites {params.dbsnp} \
+            --output {output.bsqr_table} \
+            --reference {params.genome} &> {log.BaseRecalibrator_log}
 
-# ----------------------------------------------------------------------------------------
+            $CONDA_PREFIX/bin/gatk ApplyBQSR \
+            -R {params.genome} \
+            -I {output.target_bam_withRG} \
+            --bqsr-recal-file {output.bsqr_table} \
+            -O {output.target_bam_bsqr} &> {log.ApplyBQSR_log}
 
-# run gatk haplotype caller
-rule GATK_haplotype_calling:
-    input:
-        concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed"),
-        target_bam_bsqr = os.path.join(GATKDIR, "recalibrated_bams", ''.join(["{SAMPLES}_mapq", str(config["bam_features"]["MAPQ_threshold"]), "_sorted_woMT_", DUP, "_bsqr.bam"])),
-        target_bam_bsqr_index = os.path.join(GATKDIR, "recalibrated_bams", ''.join(["{SAMPLES}_mapq", str(config["bam_features"]["MAPQ_threshold"]), "_sorted_woMT_", DUP, "_bsqr.bai"]))
-    params:
-        genome = genome_fasta,
-        sample = "{SAMPLES}",
-        to_copy_bed = os.path.join(GATKDIR, "all_samples_peak_concatenation_collapsed_sorted.bed")
-    output:
-        gvcf = temp(os.path.join(GATKDIR, ''.join(["VCF/{SAMPLES}_", DUP, "_gatk.g.vcf.gz"]))),
-        gvcf_idx = temp(os.path.join(GATKDIR, ''.join(["VCF/{SAMPLES}_", DUP, "_gatk.g.vcf.gz.tbi"])))
-    threads:
-        max(math.floor(workflow.cores/2), 1)
-    log:
-        out = os.path.join(GATKDIR, "VCF/logs/{SAMPLES}_HaplotypeCaller.log")
-    benchmark:
-        "benchmarks/GATK_haplotype_calling/GATK_haplotype_calling---{SAMPLES}_benchmark.txt"
-    shell:
-        """
-        cp {input.concatenation_bed_collapsed_sorted} {params.to_copy_bed}
+            printf '\033[1;36m{params.sample}: Indexing recalibrated bam...\\n\033[0m'
+            $CONDA_PREFIX/bin/samtools index -@ {threads} -b {output.target_bam_bsqr} {output.target_bam_bsqr_index}
+            """
 
-        printf '\033[1;36m{params.sample}: GATK Haplotype calling...\\n\033[0m'
+    # ----------------------------------------------------------------------------------------
 
-        $CONDA_PREFIX/bin/gatk HaplotypeCaller \
-        -L {input.concatenation_bed_collapsed_sorted} \
-        -R {params.genome} \
-        -I {input.target_bam_bsqr} \
-        -O {output.gvcf} \
-        -ERC GVCF \
-        -G StandardAnnotation \
-        -G AS_StandardAnnotation \
-        -G StandardHCAnnotation &> {log.out}
-        """
+
+    # compute the coverage
+    rule plotCoverage_merged_peaks:
+        input:
+            target_bam_bsqr = os.path.join(GATKDIR, "recalibrated_bams", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_sorted_woMT_", DUP, "_bsqr.bam"])),
+            concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")
+        output:
+            coverage_plot = os.path.join(GATKDIR, "coverage_plots/{SAMPLES}_plotCoverage.pdf")
+        params:
+            label = "{SAMPLES}",
+            blacklist = BLACKLIST
+        threads:
+            max(math.floor(workflow.cores/len(SAMPLENAMES)), 1)
+        log:
+            out = os.path.join(GATKDIR, "coverage_plots/logs/{SAMPLES}_plotCoverage.log")
+        benchmark:
+            "benchmarks/plotCoverage_merged_peaks/plotCoverage_merged_peaks---{SAMPLES}_benchmark.txt"
+        shell:
+            """
+            printf '\033[1;36m{params.label}: Plotting coverage at ChIP (merged) peaks...\\n\033[0m'
+
+            $CONDA_PREFIX/bin/plotCoverage \
+            --bamfiles {input.target_bam_bsqr} \
+            --labels {params.label} \
+            --BED {input.concatenation_bed_collapsed_sorted} \
+            --blackListFileName {params.blacklist} \
+            --plotFile {output.coverage_plot} \
+            --plotTitle {params.label} \
+            --numberOfProcessors {threads} &> {log.out}
+            """
+
+    # ----------------------------------------------------------------------------------------
+
+    # run gatk haplotype caller
+    rule GATK_haplotype_calling:
+        input:
+            concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed"),
+            target_bam_bsqr = os.path.join(GATKDIR, "recalibrated_bams", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_sorted_woMT_", DUP, "_bsqr.bam"])),
+            target_bam_bsqr_index = os.path.join(GATKDIR, "recalibrated_bams", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_sorted_woMT_", DUP, "_bsqr.bai"]))
+        params:
+            genome = genome_fasta,
+            sample = "{SAMPLES}",
+            to_copy_bed = os.path.join(GATKDIR, "all_samples_peak_concatenation_collapsed_sorted.bed")
+        output:
+            gvcf = temp(os.path.join(GATKDIR, ''.join(["VCF/{SAMPLES}_", DUP, "_gatk.g.vcf.gz"]))),
+            gvcf_idx = temp(os.path.join(GATKDIR, ''.join(["VCF/{SAMPLES}_", DUP, "_gatk.g.vcf.gz.tbi"])))
+        threads:
+            max(math.floor(workflow.cores/2), 1)
+        log:
+            out = os.path.join(GATKDIR, "VCF/logs/{SAMPLES}_HaplotypeCaller.log")
+        benchmark:
+            "benchmarks/GATK_haplotype_calling/GATK_haplotype_calling---{SAMPLES}_benchmark.txt"
+        shell:
+            """
+            cp {input.concatenation_bed_collapsed_sorted} {params.to_copy_bed}
+
+            printf '\033[1;36m{params.sample}: GATK Haplotype calling...\\n\033[0m'
+
+            $CONDA_PREFIX/bin/gatk HaplotypeCaller \
+            -L {input.concatenation_bed_collapsed_sorted} \
+            -R {params.genome} \
+            -I {input.target_bam_bsqr} \
+            -O {output.gvcf} \
+            -ERC GVCF \
+            -G StandardAnnotation \
+            -G AS_StandardAnnotation \
+            -G StandardHCAnnotation &> {log.out}
+            """
 
 
 # correct the genotypes that come out of haplotype caller

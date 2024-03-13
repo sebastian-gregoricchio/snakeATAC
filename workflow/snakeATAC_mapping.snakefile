@@ -49,6 +49,13 @@ RUNNAMES = [re.sub(rf"{config['fastq_suffix']}$", "", i) for i in FILENAMES]
 SAMPLENAMES = numpy.sort(numpy.unique([re.sub(rf"{config['read_suffix'][0]}|{config['read_suffix'][1]}.*$", "", i) for i in RUNNAMES]))
 
 
+# Chromosome remove chr_remove_pattern
+if (len(config["remove_other_chromosomes_pattern"]) > 0):
+    chr_remove_pattern = '^chrM|^M|'+config["remove_other_chromosomes_pattern"]
+else:
+    chr_remove_pattern = '^chrM|^M'
+
+
 ### Optional analysis outputs
 if (eval(str(config["run_fastq_qc"])) == True):
     multiqc_fastq = "03_quality_controls/trimmed_fastq_multiQC/multiQC_report_trimmed_fastq.html"
@@ -243,7 +250,8 @@ rule MAPQ_MT_filter:
         bam_mapq_only_sorted_woMT_index = temp(os.path.join("02_BAM", ''.join(["{SAMPLE}_mapq", str(config["MAPQ_threshold"]), "_sorted_woMT.bam.bai"])))
     params:
         sample = "{SAMPLE}",
-        MAPQ_threshold = config["MAPQ_threshold"]
+        MAPQ_threshold = config["MAPQ_threshold"],
+        chr_remove_pattern = chr_remove_pattern
     threads:
         max(math.floor(workflow.cores/len(SAMPLENAMES)), 1)
     benchmark:
@@ -259,7 +267,7 @@ rule MAPQ_MT_filter:
         $CONDA_PREFIX/bin/samtools idxstats {output.bam_mapq_only_sorted} > {output.idxstats_file}
 
         printf '\033[1;36m{params.sample}: Removing MT from BAM...\\n\033[0m'
-        $CONDA_PREFIX/bin/samtools idxstats {output.bam_mapq_only_sorted} | cut -f 1 | grep -v -E '^chrM|^M' | xargs ${{CONDA_PREFIX}}/bin/samtools view -@ {threads} -b {output.bam_mapq_only_sorted} > {output.bam_mapq_only_sorted_woMT}
+        $CONDA_PREFIX/bin/samtools idxstats {output.bam_mapq_only_sorted} | cut -f 1 | grep -v -E '{params.chr_remove_pattern}' | xargs ${{CONDA_PREFIX}}/bin/samtools view -@ {threads} -b {output.bam_mapq_only_sorted} > {output.bam_mapq_only_sorted_woMT}
         $CONDA_PREFIX/bin/samtools index -@ {threads} -b {output.bam_mapq_only_sorted_woMT} {output.bam_mapq_only_sorted_woMT_index}
         """
 
