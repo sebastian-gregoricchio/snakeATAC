@@ -245,7 +245,7 @@ rule MAPQ_MT_filter:
         bam_mapq_only = temp(os.path.join("02_BAM", ''.join(["{SAMPLE}_mapq", str(config["MAPQ_threshold"]), ".bam"]))),
         bam_mapq_only_sorted = temp(os.path.join("02_BAM", ''.join(["{SAMPLE}_mapq", str(config["MAPQ_threshold"]), "_sorted.bam"]))),
         bam_mapq_only_sorted_index = temp(os.path.join("02_BAM", ''.join(["{SAMPLE}_mapq", str(config["MAPQ_threshold"]), "_sorted.bai"]))),
-        idxstats_file = "02_BAM/reads_per_chromosome/{SAMPLES}_idxstats_read_per_chromosome.txt",
+        idxstats_file = "02_BAM/reads_per_chromosome/{SAMPLE}_idxstats_read_per_chromosome.txt",
         bam_mapq_only_sorted_woMT = temp(os.path.join("02_BAM", ''.join(["{SAMPLE}_mapq", str(config["MAPQ_threshold"]), "_sorted_woMT.bam"]))),
         bam_mapq_only_sorted_woMT_index = temp(os.path.join("02_BAM", ''.join(["{SAMPLE}_mapq", str(config["MAPQ_threshold"]), "_sorted_woMT.bam.bai"])))
     params:
