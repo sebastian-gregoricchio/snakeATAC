@@ -59,10 +59,10 @@ dependencies:
   - bz2file=0.98=py37h06a4308_1
   - bzip2=1.0.8=h7f98852_4
   - c-ares=1.19.0=hd590300_0
-  - ca-certificates=2023.08.22=h06a4308_0
+  - ca-certificates=2024.3.11=h06a4308_0
   - cachetools=4.2.2=pyhd3eb1b0_0
   - cairo=1.16.0=hb05425b_3
-  - certifi=2023.7.22=pyhd8ed1ab_0
+  - certifi=2022.12.7=py37h06a4308_0
   - cffi=1.15.1=py37h5eee18b_3
   - coin-or-cbc=2.10.10=h9002f0b_0
   - coin-or-cgl=0.60.7=h516709c_0
@@ -188,6 +188,7 @@ dependencies:
   - libstdcxx-ng=12.2.0=h46fd767_19
   - libtiff=4.4.0=h0e0dad5_3
   - libuuid=2.38.1=h0b41bf4_0
+  - libwebp=1.2.4=h11a3e52_1
   - libwebp-base=1.2.4=h5eee18b_0
   - libxcb=1.15=h7f8727e_0
   - libxml2=2.10.3=hca2bb57_4
@@ -195,6 +196,7 @@ dependencies:
   - logmuse=0.2.6=pyh8c360ce_0
   - lz4-c=1.9.3=h9c3ff4c_1
   - make=4.2.1=h1bed415_1
+  - matplotlib-base=3.5.3=py37hf590b9c_0
   - matplotlib-venn=0.11.9=pyhd8ed1ab_0
   - mpi=1.0=mpich
   - mpich=3.3.2=external_0
@@ -293,15 +295,19 @@ dependencies:
   - r-nlme=3.1_162=r42hac0b197_0
   - r-pillar=1.9.0=r42hc72bb7e_0
   - r-pkgconfig=2.0.3=r42hc72bb7e_2
+  - r-plyr=1.8.7=r42h884c59f_0
   - r-png=0.1_8=r42h10cf519_0
   - r-r6=2.5.1=r42hc72bb7e_1
   - r-rcolorbrewer=1.1_3=r42h785f33e_1
   - r-rcpp=1.0.10=r42h38f115c_0
   - r-rcppeigen=0.3.3.9.3=r42h9f5de39_0
   - r-rcurl=1.98_1.10=r42h133d619_0
+  - r-reshape2=1.4.4=r42ha503ecb_3
   - r-rlang=1.1.1=r42ha503ecb_0
   - r-scales=1.2.1=r42hc72bb7e_2
   - r-snow=0.4_4=r42hc72bb7e_1
+  - r-stringi=1.7.6=r42h884c59f_0
+  - r-stringr=1.4.0=r42h6115d3f_0
   - r-tibble=3.2.1=r42h133d619_1
   - r-tidyselect=1.2.0=r42hc72bb7e_0
   - r-utf8=1.2.3=r42h133d619_0
