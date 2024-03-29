@@ -49,6 +49,7 @@ FOOTDIR = "05_Footprinting_TOBIAS/"
 SUMMARYDIR = "06_Overall_quality_and_info/"
 GATKDIR = "07a_Variant_calling/"
 COPYWRITERDIR = "07b_CNV_detection/"
+DIFFTFDIR = "05b_Differential_TF_binding_TOBIAS/"
 
 
 MAPQ = str(config["bam_features"]["MAPQ_threshold"])
@@ -69,11 +70,39 @@ else:
     SUMMITS=""
 
 
+# Differential TF binding
+if (eval(str(config["differential_TF_binding"]["perform_differential_analyses"])) == True):
+    groups_tb = pd.read_csv(str(config["differential_TF_binding"]["sample_groups_table"]), sep='\t+', engine='python')
+    groups_tb = groups_tb.iloc[:,0:2].set_axis(['sample_id', 'group'], axis=1)
+    GROUPNAMES = list(numpy.unique(list(groups_tb.group)))
+    COMPARISONNAMES = list(numpy.unique([('.vs.'.join(i)) for i in config["differential_TF_binding"]["group_comparisons"]]))
+
+    # get TF names
+    with open(str(config["differential_TF_binding"]["motifs_file"]),"r") as fi:
+        id = []
+        for ln in fi:
+            if ln.startswith(">"):
+                id.append(ln[1:])
+    TFNAMES=[re.sub('\n', '', i) for i in id]
+
+    # outputs for differentials
+    #diff_TF_output = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/bindetect_results.{ext}"), comparison = COMPARISONNAMES, ext=['txt', 'xlsx'])
+    #diff_TF_output = expand(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TF}_single.base.scores_per.region.gz"), TF=TFNAMES)
+    diff_TF_output = expand(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{TF}_density_profile.pdf"), TF=TFNAMES)
+else:
+    GROUPNAMES = SAMPLENAMES
+    COMPARISONNAMES = SAMPLENAMES
+    TFNAMES = SAMPLENAMES
+    diff_TF_output = []
+
 
 # generation of global wildcard_constraints
 wildcard_constraints:
-    RUNS=constraint_to(BAMS),
-    SAMPLES=constraint_to(SAMPLENAMES)
+    RUNS = constraint_to(BAMS),
+    SAMPLES = constraint_to(SAMPLENAMES),
+    GROUPS = constraint_to(GROUPNAMES),
+    COMPARISONS = constraint_to(COMPARISONNAMES),
+    TFnames = constraint_to(TFNAMES)
 
 # Correlations and heatmaps outputs
 correlation_outputs = []
@@ -141,7 +170,8 @@ rule AAA_initialization:
         normalized_bigWig = expand(''.join(["03_Normalization/RPM_normalized/{sample}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized.bw"]), sample=SAMPLENAMES),
         narrowPeaks_peaks = expand(os.path.join(PEAKSDIR, "{sample}_mapq{mapq}_woMT_{dup}_qValue{qValue}_peaks.narrowPeak"), sample=SAMPLENAMES, mapq=MAPQ, dup=DUP, qValue=str(config["peak_calling"]["qValue_cutoff"])),
         narrowPeaks_peaks_chr = expand(os.path.join(PEAKSDIR, ''.join(["{sample}_mapq", MAPQ, "_woMT_", DUP, "_qValue", str(config["peak_calling"]["qValue_cutoff"]), "_peaks_chr.narrowPeak"])), sample=SAMPLENAMES),
-        tobias_output = expand(os.path.join(FOOTDIR, ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_",DUP,"_{extension}"])), sample=SAMPLENAMES, extension = ["AtacBias.pickle", "atacorrect.pdf", "bias.bw", "corrected.bw", "expected.bw", "uncorrected.bw"]),
+        tobias_ATACorrect = expand(os.path.join(FOOTDIR, ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_",DUP,"_{extension}"])), sample=SAMPLENAMES, extension = ["AtacBias.pickle", "atacorrect.pdf", "bias.bw", "corrected.bw", "expected.bw", "uncorrected.bw"]),
+        tobias_FootprintScores = expand(os.path.join(FOOTDIR, ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_",DUP,"_footprints.bw"])), sample=SAMPLENAMES),
         summary_file = os.path.join(SUMMARYDIR, "Counts/counts_summary.txt"),
         correlation_outputs = correlation_outputs,
         correlation_outputs_peaks = correlation_outputs_peaks,
@@ -149,6 +179,7 @@ rule AAA_initialization:
         lorenz_plot_ggplot = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf"),
         CNA_corrected_bw = CNA_corrected_bw,
         rawScores_hetamap_peaks = hetamap_peaks,
+        diff_TF_output = diff_TF_output,
         snp = snp,
         indels = indels
 
@@ -1459,7 +1490,7 @@ rule TOBIAS_ATACorrect:
         genome = genome_fasta,
         blacklist = BLACKLIST
     log:
-        out = os.path.join(FOOTDIR, "log_tobias/{SAMPLES}_tobias.log")
+        out = os.path.join(FOOTDIR, "log_tobias/{SAMPLES}_tobias_ATACorrect.log")
     threads:
         max(math.floor(workflow.cores/4), 1)
     benchmark:
@@ -1468,8 +1499,6 @@ rule TOBIAS_ATACorrect:
     shell:
         """
         printf '\033[1;36m{params.sample}: generating footprint scores with TOBIAS...\\n\033[0m'
-
-        mkdir -p {params.foot_folder}/log_tobias
 
         $CONDA_PREFIX/bin/TOBIAS ATACorrect \
         --bam {input.dedup_bam_sorted} \
@@ -1480,6 +1509,445 @@ rule TOBIAS_ATACorrect:
         --cores {threads} &> {log.out}
         """
 # ----------------------------------------------------------------------------------------
+
+# ----------------------------------------------------------------------------------------
+# Score foortprints at merged peaks
+rule TOBIAS_FootprintScores:
+    input:
+        tobias_corrected = os.path.join(FOOTDIR, ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_",DUP,"_corrected.bw"])),
+        concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")
+    output:
+        tobias_FootprintScores = os.path.join(FOOTDIR, ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_",DUP,"_footprints.bw"]))
+    params:
+        sample = "{SAMPLES}",
+        foot_folder = FOOTDIR,
+        genome = genome_fasta,
+        blacklist = BLACKLIST
+    log:
+        out = os.path.join(FOOTDIR, "log_tobias/{SAMPLES}_tobias_FootprintScores.log")
+    threads:
+        max(math.floor(workflow.cores/4), 1)
+    benchmark:
+        "benchmarks/TOBIAS_FootprintScores/TOBIAS_FootprintScores---{SAMPLES}_benchmark.txt"
+    priority: -5
+    shell:
+        """
+        printf '\033[1;36m{params.sample}: scoring footprints at merged peaks with TOBIAS...\\n\033[0m'
+
+        $CONDA_PREFIX/bin/TOBIAS FootprintScores \
+        --signal {input.tobias_corrected} \
+        --regions {input.concatenation_bed_collapsed_sorted} \
+        --output {output.tobias_FootprintScores} \
+        --cores {threads} &> {log.out}
+        """
+# ----------------------------------------------------------------------------------------
+
+
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+# DIFFERENTIAL TF BINDING ANALYSES
+# Merge bams
+rule diffTFbinding_mergeBAMs:
+    input:
+        dedup_BAM = expand(os.path.join("01_BAM_filtered", ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"])), sample = SAMPLENAMES),
+        dedup_BAM_index = expand(os.path.join("01_BAM_filtered", ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bai"])), sample = SAMPLENAMES)
+    output:
+        merged_BAM = expand(os.path.join(DIFFTFDIR, "A_merged_BAMs", ''.join(["{group}_mapq", MAPQ, "_sorted_woMT_", DUP, "_merged.bam"])), group = GROUPNAMES),
+        merged_BAM_idx = expand(os.path.join(DIFFTFDIR, "A_merged_BAMs", ''.join(["{group}_mapq", MAPQ, "_sorted_woMT_", DUP, "_merged.bam.bai"])), group = GROUPNAMES)
+    params:
+        groups = ' '.join(GROUPNAMES),
+        bam_ext = ''.join(["_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"]),
+        bam_merged_ext = ''.join(["_mapq", MAPQ, "_sorted_woMT_", DUP, "_merged.bam"]),
+        sample_config_table = str(config["differential_TF_binding"]["sample_groups_table"]),
+        outdir = DIFFTFDIR+"A_merged_BAMs"
+    threads:
+        max((workflow.cores-1), 1)
+    log:
+        out = os.path.join(DIFFTFDIR,"A_merged_BAMs/log/all.groups_mergeBAMs.log")
+    benchmark:
+        "benchmarks/diffTFbinding_mergeBAMs/diffTFbinding_mergeBAMs---all_groups_benchmark.txt"
+    priority: 1
+    shell:
+        """
+        printf '\033[1;36mMerging BAMs per group...\\n\033[0m'
+
+        for i in {params.groups}
+        do
+            FILES=$(grep -w $i {params.sample_config_table} | cut -f 1 | sed 's/$/{params.bam_ext}/' | sed 's/^/01_BAM_filtered\\//')
+            FILESJOINT="${{FILES[*]}}"
+
+            $CONDA_PREFIX/bin/samtools merge \
+            -@ {threads} \
+            -f -o {params.outdir}/${{i}}{params.bam_merged_ext} \
+            $FILES &> {log.out}
+
+            $CONDA_PREFIX/bin/samtools index -@ {threads} {params.outdir}/${{i}}{params.bam_merged_ext}
+        done
+        """
+
+# ----------------------------------------------------------------------------------------
+
+# Correct signal for Tn5 bias - merged BAMs
+rule diffTFbinding_ATACorrect:
+    input:
+        dedup_bam_sorted = os.path.join(DIFFTFDIR, "A_merged_BAMs", ''.join(["{GROUPS}_mapq", MAPQ, "_sorted_woMT_", DUP, "_merged.bam"])),
+        dedup_bam_sorted_index = os.path.join(DIFFTFDIR, "A_merged_BAMs", ''.join(["{GROUPS}_mapq", MAPQ, "_sorted_woMT_", DUP, "_merged.bam.bai"])),
+        peaks = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed"),
+        genome_fai = ancient(''.join([re.sub(".gz", "", genome_fasta, count=0, flags=0),".fai"]))
+    output:
+        tobias_output = expand(os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs", ''.join(["{GROUPS}_mapq", MAPQ, "_sorted_woMT_",DUP,"_merged_{extension}"])), extension = ["AtacBias.pickle", "atacorrect.pdf", "bias.bw", "corrected.bw", "expected.bw", "uncorrected.bw"], allow_missing=True)
+    params:
+        group = "{GROUPS}",
+        foot_folder = DIFFTFDIR+"B_corrected_scores_merged_BAMs",
+        genome = genome_fasta,
+        blacklist = BLACKLIST
+    log:
+        out = os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs/log/{GROUPS}_tobias_ATACorrect.log")
+    threads:
+        max((workflow.cores - 1), 1)
+    benchmark:
+        "benchmarks/diffTFbinding_ATACorrect/diffTFbinding_ATACorrect---{GROUPS}_benchmark.txt"
+    priority: 1
+    shell:
+        """
+        printf '\033[1;36m{params.group}: generating footprint scores with TOBIAS...\\n\033[0m'
+
+        $CONDA_PREFIX/bin/TOBIAS ATACorrect \
+        --bam {input.dedup_bam_sorted} \
+        --genome {params.genome} \
+        --peaks {input.peaks} \
+        --blacklist {params.blacklist} \
+        --outdir {params.foot_folder} \
+        --cores {threads} &> {log.out}
+        """
+# ----------------------------------------------------------------------------------------
+
+
+# Score foortprints at merged peaks - merged BAMs
+rule diffTFbinding_FootprintScores:
+    input:
+        tobias_corrected = os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs", ''.join(["{GROUPS}_mapq", MAPQ, "_sorted_woMT_",DUP,"_merged_corrected.bw"])),
+        concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")
+    output:
+        tobias_FootprintScores = os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs", ''.join(["{GROUPS}_mapq", MAPQ, "_sorted_woMT_",DUP,"_footprints.bw"]))
+    params:
+        group = "{GROUPS}",
+        foot_folder = FOOTDIR,
+        genome = genome_fasta,
+        blacklist = BLACKLIST
+    log:
+        out = os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs/log/{GROUPS}_tobias_FootprintScores.log")
+    threads:
+        max(math.floor(workflow.cores/4), 1)
+    benchmark:
+        "benchmarks/diffTFbinding_FootprintScores/diffTFbinding_FootprintScores---{GROUPS}_benchmark.txt"
+    priority: 1
+    shell:
+        """
+        printf '\033[1;36m{params.group}: scoring footprints at merged peaks of merged BAMs with TOBIAS...\\n\033[0m'
+
+        $CONDA_PREFIX/bin/TOBIAS FootprintScores \
+        --signal {input.tobias_corrected} \
+        --regions {input.concatenation_bed_collapsed_sorted} \
+        --output {output.tobias_FootprintScores} \
+        --cores {threads} &> {log.out}
+        """
+# ----------------------------------------------------------------------------------------
+
+
+# Score foortprints at merged peaks - merged BAMs
+rule diffTFbinding_BINDetect:
+    input:
+        tobias_FootprintScores = expand(os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs", ''.join(["{group}_mapq", MAPQ, "_sorted_woMT_",DUP,"_footprints.bw"])), group = GROUPNAMES),
+        concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed"),
+        genome_fai = ancient(''.join([re.sub(".gz", "", genome_fasta, count=0, flags=0),".fai"]))
+    output:
+        bindetect_results = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/bindetect_results.{ext}"), comparison = COMPARISONNAMES, ext=['txt', 'xlsx']),
+        TF_beds = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/{TF}_{TF}/beds/{TF}_{TF}_all.bed"), comparison = COMPARISONNAMES, TF=TFNAMES),
+        concatenation_bed_collapsed_sorted_woChr = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted_woChr.bed")
+    params:
+        comparisons = ' '.join(COMPARISONNAMES),
+        motifs_file = config["differential_TF_binding"]["motifs_file"],
+        foot_score_ext = ''.join(["_mapq", MAPQ, "_sorted_woMT_",DUP,"_footprints.bw"]),
+        diff_dir = re.sub("/","",DIFFTFDIR),
+        genome = genome_fasta
+    threads:
+        max(workflow.cores, 5)
+    benchmark:
+        "benchmarks/diffTFbinding_BINDetect/diffTFbinding_BINDetect---all.comparisons_benchmark.txt"
+    priority: 1
+    shell:
+        """
+        printf '\033[1;36mPerforming differential analyses for TF binding with TOBIAS...\\n\033[0m'
+        mkdir -p {params.diff_dir}/C_BINDetect_merged_BAMs/log/
+
+        sed 's/chr//' {input.concatenation_bed_collapsed_sorted} | uniq | sort -k1,1 -k2,2n -k 3,3n > {output.concatenation_bed_collapsed_sorted_woChr}
+        CHR=$(grep -i chr {input.genome_fai} | wc -l)
+
+        if [[ $CHR -gt 0 ]]
+        then
+            PEAKS={input.concatenation_bed_collapsed_sorted}
+        else
+            PEAKS={output.concatenation_bed_collapsed_sorted_woChr}
+        fi
+
+
+        for i in {params.comparisons}
+        do
+            COMPS=$(echo $i | sed 's/[.]vs[.]/ /')
+            BIGWIGS=$(echo $i | sed 's/[.]vs[.]/{params.foot_score_ext} /' | sed 's/$/{params.foot_score_ext}/' | sed 's/^/{params.diff_dir}\\/B_corrected_scores_merged_BAMs\\//' | sed 's/ / {params.diff_dir}\\/B_corrected_scores_merged_BAMs\\//')
+
+            $CONDA_PREFIX/bin/TOBIAS BINDetect \
+            --motifs {params.motifs_file} \
+            --signals $BIGWIGS \
+            --genome {params.genome} \
+            --peaks $PEAKS \
+            --outdir {params.diff_dir}/C_BINDetect_merged_BAMs/${{i}} \
+            --cond_names $COMPS \
+            --cores {threads} &> {params.diff_dir}/C_BINDetect_merged_BAMs/log/${{i}}_BINDetect.log
+        done
+        """
+
+# ----------------------------------------------------------------------------------------
+if (str(config["differential_TF_binding"]["whitelist"]) == ""):
+
+    rule deeptools_matrices:
+        input:
+            bw = expand(os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs", ''.join(["{group}_mapq", MAPQ, "_sorted_woMT_",DUP,"_merged_corrected.bw"])), group = GROUPNAMES),
+            TFbed = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/{TFnames}_{TFnames}/beds/{TFnames}_{TFnames}_all.bed"), comparison = COMPARISONNAMES[0], allow_missing = True)
+        output:
+            matrix = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TFnames}_single.base.scores_per.region.gz"),
+            table = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/tables/{TFnames}_single.base.scores_per.region.txt")
+        params:
+            bigWigs = ' '.join(expand(os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs", ''.join(["{group}_mapq", MAPQ, "_sorted_woMT_",DUP,"_merged_corrected.bw"])), group = GROUPNAMES)),
+            TF_label = "{TFnames}",
+            sample_labels = ' '.join(GROUPNAMES),
+            blacklist = BLACKLIST,
+            flanking_bp = config["differential_TF_binding"]["flanking_bp"]
+        log:
+            out = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/log/{TFnames}_deeptools_matrix.out"),
+            err = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/log/{TFnames}_deeptools_matrix.err")
+        threads:
+            max((workflow.cores / 5), 1)
+        benchmark:
+            "benchmarks/deeptools_matrices/deeptools_matrices---{TFnames}_benchmark.txt"
+        shell:
+            """
+            printf '\033[1;36m{params.TF_label}: computing DeepTools matrix...\\n\033[0m'
+
+            computeMatrix reference-point \
+            --regionsFileName {input.TFbed} \
+            --scoreFileName {params.bigWigs} \
+            --outFileName {output.matrix} \
+            --outFileNameMatrix {output.table} \
+            --upstream {params.flanking_bp} \
+            --downstream {params.flanking_bp} \
+            --referencePoint center \
+            -bs 1 \
+            --missingDataAsZero \
+            --samplesLabel {params.sample_labels} \
+            --smartLabels \
+            --blackListFileName {params.blacklist} \
+            -p {threads} > {log.out} 2> {log.err}
+            """
+else:
+    rule deeptools_matrices_whiteList:
+        input:
+            bw = expand(os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs", ''.join(["{group}_mapq", MAPQ, "_sorted_woMT_",DUP,"_merged_corrected.bw"])), group = GROUPNAMES),
+            TFbed = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/{TFnames}_{TFnames}/beds/{TFnames}_{TFnames}_all.bed"), comparison = COMPARISONNAMES[0], allow_missing = True)
+        output:
+            matrix = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TFnames}_single.base.scores_per.region.gz"),
+            table = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/tables/{TFnames}_single.base.scores_per.region.txt"),
+            reduced_bed = temp(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/tables/{TFnames}_reduced.bed"))
+        params:
+            bigWigs = ' '.join(expand(os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs", ''.join(["{group}_mapq", MAPQ, "_sorted_woMT_",DUP,"_merged_corrected.bw"])), group = GROUPNAMES)),
+            TF_label = "{TFnames}",
+            sample_labels = ' '.join(GROUPNAMES),
+            blacklist = BLACKLIST,
+            whitelist = config["differential_TF_binding"]["whitelist"],
+            flanking_bp = config["differential_TF_binding"]["flanking_bp"]
+        log:
+            out = os.path.join(config["OUTDIR"], "deeptools_matrices/log", "{TFnames}_deeptools_matrix.out"),
+            err = os.path.join(config["OUTDIR"], "deeptools_matrices/log", "{TFnames}_deeptools_matrix.err")
+        threads:
+            max((workflow.cores / len(TF)), 1)
+        benchmark:
+            "benchmarks/deeptools_matrices_whiteList/deeptools_matrices_whiteList---{TFnames}_benchmark.txt"
+        shell:
+            """
+            printf '\033[1;36m{params.TF_label}: computing DeepTools matrix...\\n\033[0m'
+
+            bedtools intersect -a {input.TFbed} -b {parmas.whitelist} -wa > {output.reduced_bed}
+
+            computeMatrix reference-point \
+            --regionsFileName {output.reduced_bed} \
+            --scoreFileName {params.bigWigs} \
+            --outFileName {output.matrix} \
+            --outFileNameMatrix {output.table} \
+            --upstream {params.flanking_bp} \
+            --downstream {params.flanking_bp} \
+            --referencePoint center \
+            -bs 1 \
+            --missingDataAsZero \
+            --samplesLabel {params.sample_labels} \
+            --smartLabels \
+            --blackListFileName {params.blacklist} \
+            -p {threads} > {log.out} 2> {log.err}
+            """
+# ----------------------------------------------------------------------------------------
+
+rule Rscript_density_profiles:
+    output:
+        script = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/density_profile_script.R")
+    threads: 1
+    benchmark:
+        "benchmarks/Rscript_density_profiles/Rscript_density_profiles_benchmark.txt"
+    run:
+        shell("printf '\033[1;36mGenerating the Rscript used to plot density profiles...\\n\033[0m'")
+
+        x = """# Load parameters
+        args = commandArgs(trailingOnly = TRUE)
+
+        results = as.character(strsplit(grep('--MATRIX*', args, value = TRUE), split = '=')[[1]][[2]])
+        plotFile = as.character(strsplit(grep('--PLOT*', args, value = TRUE), split = '=')[[1]][[2]])
+
+        #########################
+
+        # Load libraries
+        require(dplyr)
+        require(ggplot2)
+
+
+        # read matrix
+        matrix = as.data.frame(data.table::fread(results, skip = 1))
+
+        # Import metadata
+        metadata = data.table::fread(results, nrows = 1, stringsAsFactors = F, sep = "@", h = F)$V2
+        metadata = gsub(x = metadata, pattern = "[{]|[}]", replacement = "")
+        metadata = gsub(x = metadata, pattern = "\\s", replacement = "_")
+        metadata = gsub(x = metadata, pattern = "[\"],\"", replacement = ",")
+        metadata = gsub(x = metadata, pattern = "\":\"", replacement = ":")
+        metadata = gsub(x = metadata, pattern = "\":", replacement = ":")
+        metadata = gsub(x = metadata, pattern = ",\"", replacement = "@")
+        metadata = gsub(x = metadata, pattern = "\"", replacement = "")
+        metadata = gsub(x = metadata, pattern = "[,]missing", replacement = "@missing")
+        metadata = gsub(x = metadata, pattern = "[,]sort", replacement = "@sort")
+        metadata = gsub(x = metadata, pattern = "[,]unscaled", replacement = "@unscaled")
+
+        metadata = unlist(lapply(strsplit(x = metadata, split = "@")[[1]], function(x)(strsplit(x, ":"))))
+
+        metadata = data.frame("parameters" = metadata[seq(1, length(metadata),2)],
+                              "values" = metadata[seq(2, length(metadata),2)],
+                              stringsAsFactors = F)
+
+        # Collect info
+        samples = unlist(strsplit(gsub("[[]|[]]","",metadata[21,2]), ","))
+        upstream = as.numeric(unique(unlist(strsplit(gsub("[[]|[]]","",metadata[1,2]), ","))))
+        downstream = as.numeric(unique(unlist(strsplit(gsub("[[]|[]]","",metadata[2,2]), ","))))
+        boundaries = as.numeric(unique(unlist(strsplit(gsub("[[]|[]]","",metadata[22,2]), ","))))
+
+        range = (-upstream):downstream
+        range = range[range != 0]
+
+
+        # Re-shape table
+        matrix.reshaped = data.frame()
+
+        for (i in 1:length(samples)) {
+          start.col = 7 + boundaries[i]
+          end.col = 7 + boundaries[i+1] - 1
+
+          mat = matrix[,c(1:6,start.col:end.col)]
+          colnames(mat)[7:ncol(mat)] = range
+
+          mat$sample = samples[i]
+          matrix.reshaped = rbind(matrix.reshaped, mat)
+        }
+
+        matrix.reshaped =
+          reshape2::melt(data = matrix.reshaped,
+                         id.vars = c("V1", "V2", "V3", "V4", "V5", "V6", "sample"),
+                         variable.name = "position",
+                         value.name = "score") %>%
+          dplyr::mutate(position = as.character(as.character(position)))
+
+
+        # # normalize within 0-1 if required
+        # if (normalize.zero.one == TRUE) {
+        #   matrix.reshaped$score = (matrix.reshaped$score - min(matrix.reshaped$score, na.rm = T))
+        #   matrix.reshaped$score = matrix.reshaped$score / max(matrix.reshaped$score, na.rm = T)
+        # }
+
+
+        # generate stats
+        mat.plot =
+          matrix.reshaped %>%
+          dplyr::group_by(sample, position) %>%
+          dplyr::summarise(n = n(),
+                           mean = mean(score, na.rm = T),
+                           sd = sd(score, na.rm = T),
+                           .groups = "keep") %>%
+          dplyr::mutate(sem = sd / sqrt(n)) %>%
+          dplyr::mutate(position = as.numeric(position),
+                        sample = factor(sample, levels = samples))
+
+
+        # Make plot
+        plot =
+          ggplot(data = mat.plot,
+                 aes(x = position,
+                     y = mean,
+                     ymin = mean - sem,
+                     ymax = mean + sem,
+                     color = sample,
+                     fill = sample)) +
+          geom_ribbon(alpha = 0.15, color = NA) +
+          geom_line() +
+          ylab("mean Footprint score \u00b1 SEM") +
+          xlab("Distance from motif center [bp]") +
+          ggtitle(factor) +
+          #ylim(c(0,1)) +
+          theme_classic() +
+          theme(axis.text = element_text(color = "black"),
+                plot.title = element_text(hjust = 0.5, color = "black"),
+                axis.ticks = element_line(color = "black"))
+
+
+        pdf(file = plotFile, height = 5, width = 6)
+        print(plot)
+        invisible(dev.off())"""
+
+        with open(str(output.script),"w+") as f:
+          f.writelines(x)
+
+# ----------------------------------------------------------------------------------------
+
+rule plot_density_profiles:
+    input:
+        matrix = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TFnames}_single.base.scores_per.region.gz"),
+        script = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/density_profile_script.R")
+    output:
+        plot = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{TFnames}_density_profile.pdf")
+    params:
+        TF_label = "{TFnames}",
+        matrix = os.path.join(home_dir, DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TFnames}_single.base.scores_per.region.gz"),
+        plot = os.path.join(home_dir, DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{TFnames}_density_profile.gz")
+    log:
+        out = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/log/{TFnames}_density_profile.log")
+    threads: 1
+    benchmark:
+        "benchmarks/plot_density_profiles/plot_density_profiles---{TFnames}_benchmark.txt"
+    shell:
+        """
+        printf '\033[1;36m{params.TF_label}: plot density profile...\\n\033[0m'
+
+        $CONDA_PREFIX/bin/Rscript {input.script} \
+        --MATRIX={params.matrix} \
+        --PLOT={params.plot} &> {log.out}
+        """
+
+# >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
 
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -1505,7 +1973,7 @@ if (eval(str(config["somatic_variants"]["skip_base_quality_recalibration"]))):
             "benchmarks/plotCoverage_merged_peaks/plotCoverage_merged_peaks---{SAMPLES}_benchmark.txt"
         shell:
             """
-            printf '\033[1;36m{params.label}: Plotting coverage at ChIP (merged) peaks...\\n\033[0m'
+            printf '\033[1;36m{params.label}: Plotting coverage at ATAC (merged) peaks...\\n\033[0m'
 
             $CONDA_PREFIX/bin/plotCoverage \
             --bamfiles {input.target_bam_bsqr} \
