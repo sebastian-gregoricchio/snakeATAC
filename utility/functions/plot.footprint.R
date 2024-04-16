@@ -1,3 +1,19 @@
+#' plot.footprint
+#' 
+#' @description
+#' Replotting of footprints strating from deeptools matrices. It allows for the filter over a specific region set (white list).
+#' 
+#'
+#' @param matrix.gz 
+#' @param factor String indicating the name of the Transcription factor, used as title of the plot. Default: \code{NULL}.
+#' @param colors Vector of colors, or named color vector with the colors of each group, to use for the line plots. Default: \code{NULL}.
+#' @param normalize.zero.one Logical value indicating whether profiles should be normalized between 0 and 1. Default: \code{FALSE}, raw data.
+#' @param white.list A path to a bed file, or a bed file in data.frame or GRanges format. This region list will be used to filter the full table and only the average over these regions will be plotted. Default: \code{NULL}, no filtering.
+#'
+#' @return A ggplot object.
+#' 
+#' @export plot.footprint
+
 plot.footprint =
   function(matrix.gz,
            factor = NULL,
