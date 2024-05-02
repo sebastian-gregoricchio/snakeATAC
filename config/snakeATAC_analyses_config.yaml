@@ -52,7 +52,19 @@ quality_controls:
 
 
 
-### 4. Somatic Variants --------------------------------------------------------------------------------------------------------------
+### 4. Differential TF-binding analyses -----------------------------------------------------------------------------------------------
+differential_TF_binding:
+  perform_differential_analyses: True
+  sample_groups_table: ""
+  merged_bigwig_binSize: 10
+  group_comparisons: [['group_A','group_B'], ['group_C','group_A']]
+  motifs_file: ""
+  whitelist: ""
+  flanking_bp: 60
+
+
+
+### 5. Somatic Variants --------------------------------------------------------------------------------------------------------------
 somatic_variants:
   skip_base_quality_recalibration: False
   call_SNPs: True
