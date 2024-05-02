@@ -10,6 +10,7 @@ import re
 import math
 import numpy
 import pandas as pd
+from itertools import chain
 
 # Function to handle the values for the wilcards
 def constraint_to(values: List[str]) -> str:
@@ -75,7 +76,19 @@ if (eval(str(config["differential_TF_binding"]["perform_differential_analyses"])
     groups_tb = pd.read_csv(str(config["differential_TF_binding"]["sample_groups_table"]), sep='\t+', engine='python')
     groups_tb = groups_tb.iloc[:,0:2].set_axis(['sample_id', 'group'], axis=1)
     GROUPNAMES = list(numpy.unique(list(groups_tb.group)))
-    COMPARISONNAMES = list(numpy.unique([('.vs.'.join(i)) for i in config["differential_TF_binding"]["group_comparisons"]]))
+
+    # check if comparison groups are in the comparison table
+    comp_groups = list(numpy.unique(list(chain.from_iterable(config["differential_TF_binding"]["group_comparisons"]))))
+    wrong_groups = list(set(comp_groups) - set(GROUPNAMES))
+
+    if (len(wrong_groups) > 0):
+        shell("printf '\033[1;41m\n!!! snakeATAC warning !!!\nSome groups indicated for the differential TF binding comparisons are not defined in the sample configuration table.\nCheck the spelling and the letter capitalization for the following IDs:\033[0m'")
+        wrong = ', '.join(wrong_groups)+'\n'
+        shell("printf '\033[1;41m\n{wrong}\n\033[0m'")
+        print('')
+        sys.exit()
+    else:
+        COMPARISONNAMES = list(numpy.unique([('.vs.'.join(i)) for i in config["differential_TF_binding"]["group_comparisons"]]))
 
     # get TF names
     with open(str(config["differential_TF_binding"]["motifs_file"]),"r") as fi:
@@ -89,11 +102,14 @@ if (eval(str(config["differential_TF_binding"]["perform_differential_analyses"])
     #diff_TF_output = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/bindetect_results.{ext}"), comparison = COMPARISONNAMES, ext=['txt', 'xlsx'])
     #diff_TF_output = expand(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TF}_single.base.scores_per.region.gz"), TF=TFNAMES)
     diff_TF_output = expand(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{TF}_density_profile.pdf"), TF=TFNAMES)
+
+    norm_bw_average = expand(''.join(["03_Normalization/RPM_normalized_merged/{group}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized_merged.bs10.bw"]), group = GROUPNAMES)
 else:
     GROUPNAMES = SAMPLENAMES
     COMPARISONNAMES = SAMPLENAMES
     TFNAMES = SAMPLENAMES
     diff_TF_output = []
+    norm_bw_average = []
 
 
 # generation of global wildcard_constraints
@@ -180,6 +196,7 @@ rule AAA_initialization:
         CNA_corrected_bw = CNA_corrected_bw,
         rawScores_hetamap_peaks = hetamap_peaks,
         diff_TF_output = diff_TF_output,
+        norm_bw_average = norm_bw_average,
         snp = snp,
         indels = indels
 
@@ -370,7 +387,7 @@ else:
 
 
 # ----------------------------------------------------------------------------------------
-# BAM reads shifting
+# BAM reads shifting and norm BIgWigs
 rule bam_shifting_and_RPM_normalization:
     input:
         dedup_BAM = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"])),
@@ -431,6 +448,51 @@ rule bam_shifting_and_RPM_normalization:
         $CONDA_PREFIX/bin/bedGraphToBigWig {output.dedup_BedGraph_sortedByPos_shifted_noBlack_RPM} {output.chrSizes} {output.norm_bw}
         """
 # ----------------------------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------------------------
+# Average bigWigs by group
+rule compute_bigwigAverage:
+    input:
+        norm_bw = expand(''.join(["03_Normalization/RPM_normalized/{sample}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized.bw"]), sample = SAMPLENAMES)
+    output:
+        norm_bw_average = expand(''.join(["03_Normalization/RPM_normalized_merged/{group}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized_merged.bs", str(config["differential_TF_binding"]["merged_bigwig_binSize"]), ".bw"]), group = GROUPNAMES)
+    params:
+        groups_tb = str(config["differential_TF_binding"]["sample_groups_table"]),
+        binSize = str(config["differential_TF_binding"]["merged_bigwig_binSize"]),
+        groups = ' '.join(GROUPNAMES),
+        bw_input_suffix = "_mapq"+MAPQ+"_woMT_"+DUP+"_shifted_RPM.normalized.bw",
+        bw_output_suffix = "_mapq"+MAPQ+"_woMT_"+DUP+"_shifted_RPM.normalized_merged.bs"+str(config["differential_TF_binding"]["merged_bigwig_binSize"])+".bw",
+        blacklist = BLACKLIST,
+    threads:
+        workflow.cores
+    log:
+        out = expand("03_Normalization/RPM_normalized_merged/log/{group}_bigwigAverage.log", group = GROUPNAMES)
+    benchmark:
+        "benchmarks/compute_bigwigAverage/compute_bigwigAverage---allGroups_benchmark.txt"
+    priority: 50
+    shell:
+        """
+        printf '\033[1;36mMerging bigwigs by group...\\n\033[0m'
+
+        for i in {params.groups}
+        do
+            SAMPLES=$(grep $i {params.groups_tb} | cut -f 1 | uniq)
+            BIGWGS=$(echo $(for s in $SAMPLES; do echo 03_Normalization/RPM_normalized/${{s}}{params.bw_input_suffix}; done))
+
+            echo '  - '${{i}}': '$SAMPLES
+
+            $CONDA_PREFIX/bin/bigwigAverage \
+            -b $BIGWGS \
+            --binSize {params.binSize} \
+            --outFileName 03_Normalization/RPM_normalized_merged/${{i}}{params.bw_output_suffix} \
+            --outFileFormat bigwig \
+            --blackListFileName {params.blacklist} \
+            -p {threads} &> 03_Normalization/RPM_normalized_merged/log/${{i}}_bigwigAverage.log
+        done
+        """
+# ----------------------------------------------------------------------------------------
+
 
 
 # ----------------------------------------------------------------------------------------
@@ -1669,12 +1731,13 @@ rule diffTFbinding_BINDetect:
         motifs_file = config["differential_TF_binding"]["motifs_file"],
         foot_score_ext = ''.join(["_mapq", MAPQ, "_sorted_woMT_",DUP,"_footprints.bw"]),
         diff_dir = re.sub("/","",DIFFTFDIR),
-        genome = genome_fasta
+        genome = genome_fasta,
+        cores = min(max(workflow.cores, 5), 5)
     threads:
-        max(workflow.cores, 5)
+        workflow.cores
     benchmark:
         "benchmarks/diffTFbinding_BINDetect/diffTFbinding_BINDetect---all.comparisons_benchmark.txt"
-    priority: 1
+    priority: 10
     shell:
         """
         printf '\033[1;36mPerforming differential analyses for TF binding with TOBIAS...\\n\033[0m'
@@ -1703,7 +1766,7 @@ rule diffTFbinding_BINDetect:
             --peaks $PEAKS \
             --outdir {params.diff_dir}/C_BINDetect_merged_BAMs/${{i}} \
             --cond_names $COMPS \
-            --cores {threads} &> {params.diff_dir}/C_BINDetect_merged_BAMs/log/${{i}}_BINDetect.log
+            --cores {params.cores} &> {params.diff_dir}/C_BINDetect_merged_BAMs/log/${{i}}_BINDetect.log
         done
         """
 
@@ -1821,29 +1884,29 @@ rule Rscript_density_profiles:
         matrix = as.data.frame(data.table::fread(results, skip = 1))
 
         # Import metadata
-        metadata = data.table::fread(results, nrows = 1, stringsAsFactors = F, sep = "@", h = F)$V2
-        metadata = gsub(x = metadata, pattern = "[{]|[}]", replacement = "")
-        metadata = gsub(x = metadata, pattern = "\\s", replacement = "_")
-        metadata = gsub(x = metadata, pattern = "[\"],\"", replacement = ",")
-        metadata = gsub(x = metadata, pattern = "\":\"", replacement = ":")
-        metadata = gsub(x = metadata, pattern = "\":", replacement = ":")
-        metadata = gsub(x = metadata, pattern = ",\"", replacement = "@")
-        metadata = gsub(x = metadata, pattern = "\"", replacement = "")
-        metadata = gsub(x = metadata, pattern = "[,]missing", replacement = "@missing")
-        metadata = gsub(x = metadata, pattern = "[,]sort", replacement = "@sort")
-        metadata = gsub(x = metadata, pattern = "[,]unscaled", replacement = "@unscaled")
+        metadata = data.table::fread(results, nrows = 1, stringsAsFactors = F, sep = '@', h = F)$V2
+        metadata = gsub(x = metadata, pattern = '[{]|[}]', replacement = '')
+        metadata = gsub(x = metadata, pattern = '\\\s', replacement = '_')
+        metadata = gsub(x = metadata, pattern = '[\\"],\\"', replacement = ',')
+        metadata = gsub(x = metadata, pattern = '\\":\\"', replacement = ':')
+        metadata = gsub(x = metadata, pattern = '\\":', replacement = ':')
+        metadata = gsub(x = metadata, pattern = ',\\"', replacement = '@')
+        metadata = gsub(x = metadata, pattern = '\\"', replacement = '')
+        metadata = gsub(x = metadata, pattern = '[,]missing', replacement = '@missing')
+        metadata = gsub(x = metadata, pattern = '[,]sort', replacement = '@sort')
+        metadata = gsub(x = metadata, pattern = '[,]unscaled', replacement = '@unscaled')
 
-        metadata = unlist(lapply(strsplit(x = metadata, split = "@")[[1]], function(x)(strsplit(x, ":"))))
+        metadata = unlist(lapply(strsplit(x = metadata, split = '@')[[1]], function(x)(strsplit(x, ':'))))
 
-        metadata = data.frame("parameters" = metadata[seq(1, length(metadata),2)],
-                              "values" = metadata[seq(2, length(metadata),2)],
+        metadata = data.frame('parameters' = metadata[seq(1, length(metadata),2)],
+                              'values' = metadata[seq(2, length(metadata),2)],
                               stringsAsFactors = F)
 
         # Collect info
-        samples = unlist(strsplit(gsub("[[]|[]]","",metadata[21,2]), ","))
-        upstream = as.numeric(unique(unlist(strsplit(gsub("[[]|[]]","",metadata[1,2]), ","))))
-        downstream = as.numeric(unique(unlist(strsplit(gsub("[[]|[]]","",metadata[2,2]), ","))))
-        boundaries = as.numeric(unique(unlist(strsplit(gsub("[[]|[]]","",metadata[22,2]), ","))))
+        samples = unlist(strsplit(gsub('[[]|[]]','',metadata[21,2]), ','))
+        upstream = as.numeric(unique(unlist(strsplit(gsub('[[]|[]]','',metadata[1,2]), ','))))
+        downstream = as.numeric(unique(unlist(strsplit(gsub('[[]|[]]','',metadata[2,2]), ','))))
+        boundaries = as.numeric(unique(unlist(strsplit(gsub('[[]|[]]','',metadata[22,2]), ','))))
 
         range = (-upstream):downstream
         range = range[range != 0]
@@ -1865,9 +1928,9 @@ rule Rscript_density_profiles:
 
         matrix.reshaped =
           reshape2::melt(data = matrix.reshaped,
-                         id.vars = c("V1", "V2", "V3", "V4", "V5", "V6", "sample"),
-                         variable.name = "position",
-                         value.name = "score") %>%
+                         id.vars = c('V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'sample'),
+                         variable.name = 'position',
+                         value.name = 'score') %>%
           dplyr::mutate(position = as.character(as.character(position)))
 
 
@@ -1885,7 +1948,7 @@ rule Rscript_density_profiles:
           dplyr::summarise(n = n(),
                            mean = mean(score, na.rm = T),
                            sd = sd(score, na.rm = T),
-                           .groups = "keep") %>%
+                           .groups = 'keep') %>%
           dplyr::mutate(sem = sd / sqrt(n)) %>%
           dplyr::mutate(position = as.numeric(position),
                         sample = factor(sample, levels = samples))
@@ -1902,14 +1965,14 @@ rule Rscript_density_profiles:
                      fill = sample)) +
           geom_ribbon(alpha = 0.15, color = NA) +
           geom_line() +
-          ylab("mean Footprint score \u00b1 SEM") +
-          xlab("Distance from motif center [bp]") +
+          ylab('Mean Footprint score \u00b1 SEM') +
+          xlab('Distance from motif center [bp]') +
           ggtitle(factor) +
           #ylim(c(0,1)) +
           theme_classic() +
-          theme(axis.text = element_text(color = "black"),
-                plot.title = element_text(hjust = 0.5, color = "black"),
-                axis.ticks = element_line(color = "black"))
+          theme(axis.text = element_text(color = 'black'),
+                plot.title = element_text(hjust = 0.5, color = 'black'),
+                axis.ticks = element_line(color = 'black'))
 
 
         pdf(file = plotFile, height = 5, width = 6)
