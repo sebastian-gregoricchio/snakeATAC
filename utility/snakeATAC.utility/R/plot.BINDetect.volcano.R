@@ -44,6 +44,8 @@ plot.BINDetect.volcano =
     # Read table if required
     if ("character" %in% class(results)) {
       results = dplyr::mutate(read.delim(results, h=T), motif_id = gsub(motif.pattern, "",motif_id))
+    } else {
+      results = as.data.frame(results)
     }
 
     # Get conditions names
@@ -57,15 +59,16 @@ plot.BINDetect.volcano =
     colnames(results)[12] = "signif"
 
     # Add Factor column for points colors
-    results = mutate(results,
-                     diff.status = factor(ifelse(signif == "True",
-                                                 yes = ifelse(sign(change) == 1,
-                                                              yes = paste("Higher in", condition.A),
-                                                              no = paste("Higher in", condition.B)),
-                                                 no = "NS"),
-                                          levels = c(paste("Higher in", condition.B),
-                                                     paste("Higher in", condition.A),
-                                                     "NS")))
+    results =
+      dplyr::mutate(results,
+                    diff.status = factor(ifelse(signif == "True" | signif == T,
+                                                yes = ifelse(sign(change) == 1,
+                                                             yes = paste("Higher in", condition.A),
+                                                             no = paste("Higher in", condition.B)),
+                                                no = "NS"),
+                                         levels = c(paste("Higher in", condition.B),
+                                                    paste("Higher in", condition.A),
+                                                    "NS")))
 
     # Define colors
     colors = c(left.color, right.color, ns.color)
