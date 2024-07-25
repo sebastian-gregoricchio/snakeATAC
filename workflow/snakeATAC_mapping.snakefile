@@ -1,6 +1,6 @@
-#######################################
-## SPACCa: Snakefile for DNA mapping ##
-#######################################
+##########################################
+## snakeATAC: Snakefile for DNA mapping ##
+##########################################
 
 import os
 #conda_prefix = str(os.environ["CONDA_PREFIX"])
