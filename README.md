@@ -1,5 +1,5 @@
 [![Snakemake](https://img.shields.io/badge/snakemake-≥7.24.0-brightgreen.svg)](https://snakemake.github.io)
-![release](https://img.shields.io/github/v/release/sebastian-gregoricchio/SPACCa)
+![release](https://img.shields.io/github/v/release/sebastian-gregoricchio/snakeATAC)
 [![license](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://sebastian-gregoricchio.github.io/snakeATAC/LICENSE.md/LICENSE)
 [![forks](https://img.shields.io/github/forks/sebastian-gregoricchio/snakeATAC?style=social)](https://github.com/sebastian-gregoricchio/snakeATAC/fork)
 <!-- ![update](https://badges.pufler.dev/updated/sebastian-gregoricchio/snakeATAC)
@@ -24,7 +24,7 @@ If you use this pipeline, please cite:
 <font size="-0.5">
 
 <div style="margin-left:2%; margin-right:2%; text-align: justify">
-No publication associated yet. "<i>SPACCa</i>: a Snakemake Pipeline for the analyses of ChIP-seq data in Cancer samples. <br>
+No publication associated yet. "<i>snakeATAC</i>: a Snakemake Pipeline for the analyses of ATAC-seq data in Cancer samples. <br>
 <i>XYZ</i>, Volume X, Issue X, 2023, XYZ <br>
 DOI: <a href="https://doi.org/XYZ">XYZ</a>
 </div>
