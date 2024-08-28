@@ -184,7 +184,7 @@ rule AAA_initialization:
         filtBAM_sorted_woMT = expand(os.path.join("01_BAM_filtered", ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"])), sample=SAMPLENAMES),
         filtBAM_sorted_woMT_index = expand(os.path.join("01_BAM_filtered", ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bai"])), sample=SAMPLENAMES),
         multiQC_BAM_html = os.path.join(SUMMARYDIR, ''.join(["multiQC_", DUP, "_bams/multiQC_report_BAMs_", DUP, ".html"])),
-        report_fragSize_ggplot = os.path.join(SUMMARYDIR, "fragmentSizeDistribution_plots/log/ggplot_replotting.log"),
+        report_fragSize_ggplot = os.path.join(SUMMARYDIR, "fragmentSizeDistribution_plots/ALL.SAMPLES_fragmentSizeDistribution_plots_ggplot.version.pdf"),
         normalized_bigWig = expand(''.join(["03_Normalization/RPM_normalized/{sample}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized.bw"]), sample=SAMPLENAMES),
         narrowPeaks_peaks = expand(os.path.join(PEAKSDIR, "{sample}_mapq{mapq}_woMT_{dup}_qValue{qValue}_peaks.narrowPeak"), sample=SAMPLENAMES, mapq=MAPQ, dup=DUP, qValue=str(config["peak_calling"]["qValue_cutoff"])),
         narrowPeaks_peaks_chr = expand(os.path.join(PEAKSDIR, ''.join(["{sample}_mapq", MAPQ, "_woMT_", DUP, "_qValue", str(config["peak_calling"]["qValue_cutoff"]), "_peaks_chr.narrowPeak"])), sample=SAMPLENAMES),
