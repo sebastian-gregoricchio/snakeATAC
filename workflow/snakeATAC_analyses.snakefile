@@ -184,7 +184,7 @@ rule AAA_initialization:
         filtBAM_sorted_woMT = expand(os.path.join("01_BAM_filtered", ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"])), sample=SAMPLENAMES),
         filtBAM_sorted_woMT_index = expand(os.path.join("01_BAM_filtered", ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bai"])), sample=SAMPLENAMES),
         multiQC_BAM_html = os.path.join(SUMMARYDIR, ''.join(["multiQC_", DUP, "_bams/multiQC_report_BAMs_", DUP, ".html"])),
-        report_pdf = os.path.join(SUMMARYDIR, "fragmentSizeDistribution_plots/ALL.SAMPLES_fragmentSizeDistribution_plots.pdf"),
+        report_fragSize_ggplot = os.path.join(SUMMARYDIR, "fragmentSizeDistribution_plots/log/ggplot_replotting.log"),
         normalized_bigWig = expand(''.join(["03_Normalization/RPM_normalized/{sample}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized.bw"]), sample=SAMPLENAMES),
         narrowPeaks_peaks = expand(os.path.join(PEAKSDIR, "{sample}_mapq{mapq}_woMT_{dup}_qValue{qValue}_peaks.narrowPeak"), sample=SAMPLENAMES, mapq=MAPQ, dup=DUP, qValue=str(config["peak_calling"]["qValue_cutoff"])),
         narrowPeaks_peaks_chr = expand(os.path.join(PEAKSDIR, ''.join(["{sample}_mapq", MAPQ, "_woMT_", DUP, "_qValue", str(config["peak_calling"]["qValue_cutoff"]), "_peaks_chr.narrowPeak"])), sample=SAMPLENAMES),
@@ -193,7 +193,6 @@ rule AAA_initialization:
         summary_file = os.path.join(SUMMARYDIR, "Counts/counts_summary.txt"),
         correlation_outputs = correlation_outputs,
         correlation_outputs_peaks = correlation_outputs_peaks,
-        lorenz_plot = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf"),
         lorenz_plot_ggplot = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf"),
         CNA_corrected_bw = CNA_corrected_bw,
         rawScores_hetamap_peaks = hetamap_peaks,
@@ -654,8 +653,7 @@ rule fragment_size_distribution_report:
     shell:
         """
         printf '\033[1;36mMerging fragmentSizeDistribution reports in a unique PDF...\\n\033[0m'
-        $CONDA_PREFIX/bin/pdfcombine {params.distribution_plots_pattern} -o {output.report_pdf} -sf &> {log.pdfcombine}
-
+        $CONDA_PREFIX/bin/TOBIAS MergePDF --input {params.distribution_plots_pattern} --output {output.report_pdf} &> {log.pdfcombine}
 
         printf '\033[1;36mReplotting fragmentSizeDistribution reports in R (ggplot version)...\\n\033[0m'
         echo "tb = do.call(rbind, lapply(list.files('{params.dir}{params.summary_dir}fragmentSizeDistribution_plots/table_and_fragmentSize', pattern = 'RawFragmentLengths', full.names = T), function(x)(read.delim(x, h=T, skip=1))))" > {output.replot_script}
@@ -966,6 +964,9 @@ rule Lorenz_curve_merge_plots:
         lorenz_plots_pattern = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/lorenz_plots/*_Lorenz_curve_deeptools.plotFingreprint.pdf"),
         dir = os.path.join(home_dir,""),
         summary_dir = SUMMARYDIR,
+    log:
+        pdfcombine = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/log/LorenzCurve_plotFingreprint_mergePdf.log"),
+        ggplotcombine = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/log/LorenzCurve_plotFingreprint_ggplot.merge.plots.log")
     threads: 1
     benchmark:
         "benchmarks/Lorenz_curve/Lorenz_curve_merge_plots---benchmark.txt"
@@ -973,7 +974,7 @@ rule Lorenz_curve_merge_plots:
     shell:
         """
         printf '\033[1;36mCombine Lorenz curves-Fingerprint for all samples...\\n\033[0m'
-        $CONDA_PREFIX/bin/pdfcombine {params.lorenz_plots_pattern} -o {output.lorenz_plot} -sf
+        $CONDA_PREFIX/bin/TOBIAS MergePDF --input {params.lorenz_plots_pattern} --output {output.lorenz_plot} &> {log.pdfcombine}
 
         printf '\033[1;36mMake combined Lorenz curves-Fingerprint plot...\\n\033[0m'
         $CONDA_PREFIX/bin/Rscript \
@@ -983,7 +984,7 @@ rule Lorenz_curve_merge_plots:
         -e "for (i in 1:length(tables)) (combined_table = rbind(combined_table, dplyr::mutate(read.delim(tables[i], skip = 2, h=F), sample = gsub('_Lorenz_raw[.]counts_deeptools[.]plotFingreprint[.]txt','',basename(tables[i]))) %>% dplyr::rename(counts = V1) %>% dplyr::arrange(counts) %>% dplyr::mutate(cumulative_sum = cumsum(counts), rank = (1:nrow(.))/nrow(.)) %>% dplyr::mutate(cumulative_sum = cumulative_sum/max(cumulative_sum))))" \
         -e "pdf('{params.dir}{output.lorenz_plot_ggplot}', width = 8, height = 6.5)" \
         -e "ggplot2::ggplot(data = combined_table, ggplot2::aes(x = rank, y = cumulative_sum, color = sample)) + ggplot2::geom_line() + ggplot2::ggtitle('Fingerprints (Lorenz curves) all samples') + ggplot2::xlim(c(0,1)) + ggplot2::xlab('Normalized rank') + ggplot2::ylab('Fraction with reference to the bin with highest coverage') + ggplot2::theme_classic() + ggplot2::theme(axis.text = ggplot2::element_text(color = 'black'), axis.ticks = ggplot2::element_line(color = 'black'))" \
-        -e "invisible(dev.off())"
+        -e "invisible(dev.off())" &> {log.ggplotcombine}
         """
 # ----------------------------------------------------------------------------------------
 
@@ -1727,7 +1728,7 @@ rule diffTFbinding_BINDetect:
         genome_fai = ancient(''.join([re.sub(".gz", "", genome_fasta, count=0, flags=0),".fai"]))
     output:
         bindetect_results = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/bindetect_results.{ext}"), comparison = COMPARISONNAMES, ext=['txt', 'xlsx']),
-        TF_beds = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/{TF}_{TF}/beds/{TF}_{TF}_all.bed"), comparison = COMPARISONNAMES, TF=TFNAMES),
+        TF_beds = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/{TF}/beds/{TF}_all.bed"), comparison = COMPARISONNAMES, TF=TFNAMES),
         concatenation_bed_collapsed_sorted_woChr = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted_woChr.bed")
     params:
         comparisons = ' '.join(COMPARISONNAMES),
@@ -1735,6 +1736,7 @@ rule diffTFbinding_BINDetect:
         foot_score_ext = ''.join(["_mapq", MAPQ, "_sorted_woMT_",DUP,"_footprints.bw"]),
         diff_dir = re.sub("/","",DIFFTFDIR),
         genome = genome_fasta,
+        factors = ' '.join(TFNAMES),
         #cores = min(max(workflow.cores, 5), 5)
         cores = workflow.cores
     threads:
@@ -1763,6 +1765,8 @@ rule diffTFbinding_BINDetect:
             COMPS=$(echo $i | sed 's/[.]vs[.]/ /')
             BIGWIGS=$(echo $i | sed 's/[.]vs[.]/{params.foot_score_ext} /' | sed 's/$/{params.foot_score_ext}/' | sed 's/^/{params.diff_dir}\\/B_corrected_scores_merged_BAMs\\//' | sed 's/ / {params.diff_dir}\\/B_corrected_scores_merged_BAMs\\//')
 
+            echo '   '- ${{i}}': processing...'
+
             $CONDA_PREFIX/bin/TOBIAS BINDetect \
             --motifs {params.motifs_file} \
             --signals $BIGWIGS \
@@ -1770,7 +1774,10 @@ rule diffTFbinding_BINDetect:
             --peaks $PEAKS \
             --outdir {params.diff_dir}/C_BINDetect_merged_BAMs/${{i}} \
             --cond_names $COMPS \
+            --naming id \
             --cores {params.cores} &> {params.diff_dir}/C_BINDetect_merged_BAMs/log/${{i}}_BINDetect.log
+
+            echo '   '- ${{i}}': completed.'
         done
         """
 
@@ -1780,7 +1787,7 @@ if (str(config["differential_TF_binding"]["whitelist"]) == ""):
     rule deeptools_matrices:
         input:
             bw = expand(os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs", ''.join(["{group}_mapq", MAPQ, "_sorted_woMT_",DUP,"_merged_corrected.bw"])), group = GROUPNAMES),
-            TFbed = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/{TFnames}_{TFnames}/beds/{TFnames}_{TFnames}_all.bed"), comparison = COMPARISONNAMES[0], allow_missing = True)
+            TFbed = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/{TFnames}/beds/{TFnames}_all.bed"), comparison = COMPARISONNAMES[0], allow_missing = True)
         output:
             matrix = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TFnames}_single.base.scores_per.region.gz"),
             table = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/tables/{TFnames}_single.base.scores_per.region.txt")
@@ -1820,7 +1827,7 @@ else:
     rule deeptools_matrices_whiteList:
         input:
             bw = expand(os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs", ''.join(["{group}_mapq", MAPQ, "_sorted_woMT_",DUP,"_merged_corrected.bw"])), group = GROUPNAMES),
-            TFbed = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/{TFnames}_{TFnames}/beds/{TFnames}_{TFnames}_all.bed"), comparison = COMPARISONNAMES[0], allow_missing = True)
+            TFbed = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/{TFnames}/beds/{TFnames}_all.bed"), comparison = COMPARISONNAMES[0], allow_missing = True)
         output:
             matrix = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TFnames}_single.base.scores_per.region.gz"),
             table = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/tables/{TFnames}_single.base.scores_per.region.txt"),
