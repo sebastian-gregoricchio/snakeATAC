@@ -68,8 +68,10 @@ correlation.heatmap =
       rownames(corr_matrix) = gsub("'","",corr_matrix$V1)
       corr_matrix$V1 = gsub("'","",corr_matrix$V1)
     } else {
-      corr_matrix = as.data.frame(corr_matrix)
-      corr_matrix$V1 = rownames(corr_matrix)
+      corr_matrix = as.data.frame(correlation.matrix)
+      corr_matrix[,1] = gsub("'","",corr_matrix[,1])
+      rownames(corr_matrix) = corr_matrix[,1]
+      colnames(corr_matrix) = gsub("'","",colnames(corr_matrix))
     }
 
 
