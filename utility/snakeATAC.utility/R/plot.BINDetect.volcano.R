@@ -14,7 +14,7 @@
 #' @param labels.min.segment.length Numeric value indicating the minimum length of the line connecting the motif labels and the corresponding dot (passed to \code{ggrepel}). Default: \code{0}, segment always present.
 #' @param labels.repel.force Numeric value indicated the force of repulsion between overlapping text labels (passed to \code{ggrepel}). Default: \code{10}.
 #' @param labels.max.overlaps Numeric value indicating of maximum labels overlapping allowed (passed to \code{ggrepel}). Default: \code{100}.
-#' @param extra.labels Vector of other motifs to display, retrospectively by their significance. Default: \code{"none"}.
+#' @param extra.labels Vector of other motifs to display, irrespectively by their significance. Default: \code{"none"}.
 #'
 #' @return A ggplot object.
 #'
