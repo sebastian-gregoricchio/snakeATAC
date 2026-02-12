@@ -653,16 +653,19 @@ rule fragment_size_distribution_report:
     shell:
         """
         printf '\033[1;36mMerging fragmentSizeDistribution reports in a unique PDF...\\n\033[0m'
-        $CONDA_PREFIX/bin/TOBIAS MergePDF --input {params.distribution_plots_pattern} --output {output.report_pdf} &> {log.pdfcombine}
+        $CONDA_PREFIX/bin/pdfcombine {params.distribution_plots_pattern} -o {output.report_pdf} &> {log.pdfcombine}
 
         printf '\033[1;36mReplotting fragmentSizeDistribution reports in R (ggplot version)...\\n\033[0m'
-        echo "tb = do.call(rbind, lapply(list.files('{params.dir}{params.summary_dir}fragmentSizeDistribution_plots/table_and_fragmentSize', pattern = 'RawFragmentLengths', full.names = T), function(x)(read.delim(x, h=T, skip=1))))" > {output.replot_script}
+        echo "library(ggplot2)" > {output.replot_script}
+        echo "tb = do.call(rbind, lapply(list.files('{params.dir}{params.summary_dir}fragmentSizeDistribution_plots/table_and_fragmentSize', pattern = 'RawFragmentLengths', full.names = TRUE), function(x)(read.delim(x, h=TRUE, skip=1))))" >> {output.replot_script}
         echo "n.samples = length(unique(tb[,3]))" >> {output.replot_script}
-        echo "plot = ggplot2::ggplot(data = tb, ggplot2::aes(x = Size, y = Occurrences, color = Sample)) + ggplot2::geom_smooth(method = 'loess', formula = y ~ x, span = 0.05, show.legend = F, se = F, color = 'navyblue', linewidth = 0.5) + ggplot2::xlim(c(1,{params.maxFragmentLength})) + ggplot2::theme_classic() + ggplot2::facet_wrap(~Sample, scale='free', ncol = floor(sqrt(n.samples))) + ggplot2::theme(axis.ticks = ggplot2::element_line(color ='black'), axis.text = ggplot2::element_text(color = 'black'), strip.background = ggplot2::element_blank())" >> {output.replot_script}
+        echo "plot = ggplot(data = tb, aes(x = Size, y = Occurrences, color = Sample)) + geom_smooth(method = 'loess', formula = y ~ x, span = 0.05, show.legend = FALSE, se = FALSE, color = 'navyblue', linewidth = 0.5) + xlim(c(1,{params.maxFragmentLength})) + theme_classic() + facet_wrap(~Sample, scale='free', ncol = floor(sqrt(n.samples))) + theme(axis.ticks = element_line(color ='black'), axis.text = element_text(color = 'black'), strip.background = element_blank())" >> {output.replot_script}
         echo "pdf(file = '{params.dir}{output.report_ggplot}', width = floor(sqrt(n.samples)) * 2.7, height = ceiling(n.samples / floor(sqrt(n.samples))) * 1.5)" >> {output.replot_script}
         echo "print(plot)" >> {output.replot_script}
         echo "invisible(dev.off())" >> {output.replot_script}
 
+        unset R_LIBS_USER
+        unset R_LIBS
         $CONDA_PREFIX/bin/Rscript {output.replot_script} &> {log.ggplot}
         """
 # ----------------------------------------------------------------------------------------
@@ -974,9 +977,12 @@ rule Lorenz_curve_merge_plots:
     shell:
         """
         printf '\033[1;36mCombine Lorenz curves-Fingerprint for all samples...\\n\033[0m'
-        $CONDA_PREFIX/bin/TOBIAS MergePDF --input {params.lorenz_plots_pattern} --output {output.lorenz_plot} &> {log.pdfcombine}
+        $CONDA_PREFIX/bin/pdfcombine {params.lorenz_plots_pattern} -o {output.lorenz_plot} &> {log.pdfcombine}
 
         printf '\033[1;36mMake combined Lorenz curves-Fingerprint plot...\\n\033[0m'
+        
+        unset R_LIBS_USER
+        unset R_LIBS
         $CONDA_PREFIX/bin/Rscript \
         -e "require(dplyr)" \
         -e "tables = list.files(path = '{params.dir}06_Overall_quality_and_info/LorenzCurve_plotFingreprint/lorenz_counts', pattern = '.plotFingreprint.txt', full.names = T)" \
@@ -1134,6 +1140,9 @@ rule generate_copywriteR_genome_map:
         """
         ### Generate genome index
         printf '\033[1;36mGenerating genome mappability files (CopywriteR)...\\n\033[0m'
+        
+        unset R_LIBS_USER
+        unset R_LIBS
         $CONDA_PREFIX/bin/Rscript -e 'CopywriteR::preCopywriteR(output.folder = "{params.data_folder}", bin.size = {params.resolution}*1000, ref.genome = "{params.genome}", prefix = "")' &> {log.out}
         """
 
@@ -1185,6 +1194,8 @@ rule CopywriteR_CNA_detection:
 
         $CONDA_PREFIX/bin/bedtools merge -i {input.peaks} > {output.collapsed_peaks}
 
+        unset R_LIBS_USER
+        unset R_LIBS
         $CONDA_PREFIX/bin/Rscript {input.copywriteR_script} \
         --SAMPLENAME={params.sample} \
         --BAMFILE={params.target} \
@@ -2014,6 +2025,8 @@ rule plot_density_profiles:
         """
         printf '\033[1;36m{params.TF_label}: plot density profile...\\n\033[0m'
 
+        unset R_LIBS_USER
+        unset R_LIBS
         $CONDA_PREFIX/bin/Rscript {input.script} \
         --MATRIX={params.matrix} \
         --PLOT={params.plot} &> {log.out}
