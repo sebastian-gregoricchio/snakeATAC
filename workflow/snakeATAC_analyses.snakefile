@@ -1744,7 +1744,7 @@ rule diffTFbinding_peaks_woChr:
     output:
         peaks_woChr = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted_woChr.bed")
     benchmark:
-        "benchmarks/diffTFbinding_peaks_woChr/diffTFbinding_peaks_woChr_benchmark.txt"
+        "benchmarks/diffTFbinding_peaks_woChr/diffTFbinding_peaks_woChr---all_samples_benchmark.txt"
     shell:
         """
         printf '\033[1;36mMerging and collapsing all peaks in a unique file...\\n\033[0m'
