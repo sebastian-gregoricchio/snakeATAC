@@ -89,6 +89,7 @@ if (eval(str(config["differential_TF_binding"]["perform_differential_analyses"])
         sys.exit()
     else:
         COMPARISONNAMES = list(numpy.unique([('.vs.'.join(i)) for i in config["differential_TF_binding"]["group_comparisons"]]))
+        COMPARISON_GROUPS = {'.vs.'.join(pair): list(pair) for pair in config["differential_TF_binding"]["group_comparisons"]}
 
     # get TF names
     with open(str(config["differential_TF_binding"]["motifs_file"]),"r") as fi:
@@ -108,6 +109,7 @@ if (eval(str(config["differential_TF_binding"]["perform_differential_analyses"])
 else:
     GROUPNAMES = SAMPLENAMES
     COMPARISONNAMES = SAMPLENAMES
+    COMPARISON_GROUPS = []
     TFNAMES = SAMPLENAMES
     diff_TF_output = []
     bindetect_results_output = []
@@ -120,6 +122,7 @@ wildcard_constraints:
     SAMPLES = constraint_to(SAMPLENAMES),
     GROUPS = constraint_to(GROUPNAMES),
     COMPARISONS = constraint_to(COMPARISONNAMES),
+    comparison = constraint_to(COMPARISONNAMES),
     TFnames = constraint_to(TFNAMES)
 
 # Correlations and heatmaps outputs
@@ -406,7 +409,8 @@ rule bam_shifting_and_RPM_normalization:
         dedup_BedGraph_sortedByPos_shifted_noBlack_RPM = temp(os.path.join("03_Normalization/RPM_normalized/", ''.join(["temp_{SAMPLES}_mapq", MAPQ, "_sorted_woMT_",DUP,"_sortedByPos_shifted_noBlack_RPM.bedGraph"]))),
         chrSizes = temp("03_Normalization/RPM_normalized/temp_{SAMPLES}_chrSizes_from_genome.txt"),
         # keep
-        norm_bw = ''.join(["03_Normalization/RPM_normalized/{SAMPLES}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized.bw"])
+        norm_bw = ''.join(["03_Normalization/RPM_normalized/{SAMPLES}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized.bw"]),
+        reads_left_after_shifting = os.path.join("03_Normalization/RPM_normalized/read_counts/", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_",DUP,"_readCountPostShifting.txt"]))
     params:
         sample = "{SAMPLES}",
         build_normalization = "03_Normalization/RPM_normalized/bamToBed_log",
@@ -414,7 +418,7 @@ rule bam_shifting_and_RPM_normalization:
         mapq_cutoff = MAPQ,
         minFragmentLength = str(config["bam_features"]["minFragmentLength"]),
         maxFragmentLength = str(config["bam_features"]["maxFragmentLength"]),
-        ignore_chr = '|'.join([re.sub('\..*$', '', i) for i in str(config["genomic_annotations"]["ignore_for_normalization"]).split(" ")])
+        ignore_chr = '|'.join([re.sub('\\..*$', '', i) for i in str(config["genomic_annotations"]["ignore_for_normalization"]).split(" ")])
     threads:
         max(math.floor(workflow.cores/2), 1)
     log:
@@ -446,8 +450,12 @@ rule bam_shifting_and_RPM_normalization:
         cut -f1,2 {input.genome_fai} > {output.chrSizes}
         $CONDA_PREFIX/bin/bedtools genomecov -bg -i {output.dedup_BED_sortedByPos_shifted_noBlack} -g {output.chrSizes} | awk -F "\\t" -v tot="$TOTREADS" '{{print $1,$2,$3,$4/((tot*2)/1000000)}}' OFMT="%.20f" > {output.dedup_BedGraph_sortedByPos_shifted_noBlack_RPM}
 
-        printf '\033[1;36m{params.sample}: Computing RPM-normalized bigWig...\\n\033[0m'
+        printf '\033[1;36m{params.sample}: Produce RPM-normalized bigWig...\\n\033[0m'
         $CONDA_PREFIX/bin/bedGraphToBigWig {output.dedup_BedGraph_sortedByPos_shifted_noBlack_RPM} {output.chrSizes} {output.norm_bw}
+
+        printf '\033[1;36m{params.sample}: Counting reads left after shfiting...\\n\033[0m'
+        halfShiftedBEDPE=$(printf %d\\\\n $(wc -l < {output.dedup_BED_sortedByPos_shifted_noBlack}))
+        echo $halfShiftedBEDPE > {output.reads_left_after_shifting}
         """
 # ----------------------------------------------------------------------------------------
 
@@ -722,9 +730,9 @@ rule peakCalling_MACS3:
 rule counts_summary:
     input:
         flagstat_filtered = expand(os.path.join("01_BAM_filtered/flagstat/", ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_", DUP, "_flagstat.txt"])), sample = SAMPLENAMES),
-        dedup_BED_sortedByPos_shifted_noBlack = expand(os.path.join("03_Normalization/RPM_normalized/", ''.join(["temp_{sample}_mapq", MAPQ, "_sorted_woMT_",DUP,"_sortedByPos_shifted_noBlack.bed"])), sample=SAMPLENAMES),
         peaks_file = expand(os.path.join(PEAKSDIR, ''.join(["{sample}_mapq", MAPQ, "_woMT_", DUP, "_qValue", str(config["peak_calling"]["qValue_cutoff"]), "_peaks.narrowPeak"])), sample = SAMPLENAMES),
-        norm_bw = expand("03_Normalization/RPM_normalized/{sample}_mapq{mapq}_woMT_{dup}_shifted_RPM.normalized.bw", sample=SAMPLENAMES, dup=DUP, mapq=MAPQ)
+        norm_bw = expand("03_Normalization/RPM_normalized/{sample}_mapq{mapq}_woMT_{dup}_shifted_RPM.normalized.bw", sample=SAMPLENAMES, dup=DUP, mapq=MAPQ),
+        reads_left_after_shifting = expand(os.path.join("03_Normalization/RPM_normalized/read_counts/", ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_",DUP,"_readCountPostShifting.txt"])), sample = SAMPLENAMES)
     output:
         summary_file = os.path.join(SUMMARYDIR, "Counts/counts_summary.txt"),
         summary_file_temp = temp(os.path.join(SUMMARYDIR, "Counts/summary_file.temp"))
@@ -756,7 +764,7 @@ rule counts_summary:
 
             dedupBAM=$(grep mapped 01_BAM_filtered/flagstat/${{NAME}}_mapq{params.MAPQ}_sorted_woMT_{params.DUP}_flagstat.txt | head -n 1 | cut -f 1 -d ' ')
 
-            halfShiftedBEDPE=$(printf %d\\\\n $(wc -l < 03_Normalization/RPM_normalized/temp_${{NAME}}_mapq{params.MAPQ}_sorted_woMT_{params.DUP}_sortedByPos_shifted_noBlack.bed))
+            halfShiftedBEDPE=$(cat 03_Normalization/RPM_normalized/read_counts/${{NAME}}_mapq{params.MAPQ}_sorted_woMT_{params.DUP}_readCountPostShifting.txt)
             shiftedBEDPE=$((halfShiftedBEDPE + halfShiftedBEDPE))
             lossReads=$((dedupBAM - shiftedBEDPE))
 
@@ -980,7 +988,7 @@ rule Lorenz_curve_merge_plots:
         $CONDA_PREFIX/bin/pdfcombine {params.lorenz_plots_pattern} -o {output.lorenz_plot} &> {log.pdfcombine}
 
         printf '\033[1;36mMake combined Lorenz curves-Fingerprint plot...\\n\033[0m'
-        
+
         unset R_LIBS_USER
         unset R_LIBS
         $CONDA_PREFIX/bin/Rscript \
@@ -1140,7 +1148,7 @@ rule generate_copywriteR_genome_map:
         """
         ### Generate genome index
         printf '\033[1;36mGenerating genome mappability files (CopywriteR)...\\n\033[0m'
-        
+
         unset R_LIBS_USER
         unset R_LIBS
         $CONDA_PREFIX/bin/Rscript -e 'CopywriteR::preCopywriteR(output.folder = "{params.data_folder}", bin.size = {params.resolution}*1000, ref.genome = "{params.genome}", prefix = "")' &> {log.out}
@@ -1374,7 +1382,7 @@ rule peaks_zScores_and_heatmap:
 
         # Import multiBigWig summary table
         import pandas as pd
-        matrix = pd.read_csv(str(input.score_matrix_peaks_table),  sep='\s+', engine='python')
+        matrix = pd.read_csv(str(input.score_matrix_peaks_table),  sep='\\s+', engine='python')
 
         # Use peak coordinates as ID ofr each row
         matrix["peak_ID"] = matrix[matrix.columns[:3]].apply(lambda x: '_'.join(x.dropna().astype(str)),axis=1)
@@ -1430,7 +1438,7 @@ rule peaks_zScores_and_heatmap:
             shell("printf '\033[1;36m    - Computing the zScores for {PEAKCALLER} peaks...\\n\033[0m'")
 
             import pandas as pd
-            matrix = pd.read_csv(str(input.score_matrix_peaks_table),  sep='\s+', engine='python')
+            matrix = pd.read_csv(str(input.score_matrix_peaks_table),  sep='\\s+', engine='python')
             stat_tb = pd.DataFrame({'rowMeans': matrix[matrix.columns[3:]].mean(axis=1),
                                     'SD':  matrix[matrix.columns[3:]].std(axis=1)})
 
@@ -1730,66 +1738,63 @@ rule diffTFbinding_FootprintScores:
         """
 # ----------------------------------------------------------------------------------------
 
+rule diffTFbinding_peaks_woChr:
+    input:
+        peaks = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed")
+    output:
+        peaks_woChr = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted_woChr.bed")
+    benchmark:
+        "benchmarks/diffTFbinding_peaks_woChr/diffTFbinding_peaks_woChr_benchmark.txt"
+    shell:
+        """
+        printf '\033[1;36mMerging and collapsing all peaks in a unique file...\\n\033[0m'
+        sed 's/chr//' {input.peaks} | uniq | sort -k1,1 -k2,2n -k3,3n > {output.peaks_woChr}
+        """
+
+# ----------------------------------------------------------------------------------------
 
 # Score foortprints at merged peaks - merged BAMs
 rule diffTFbinding_BINDetect:
     input:
-        tobias_FootprintScores = expand(os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs", ''.join(["{group}_mapq", MAPQ, "_sorted_woMT_",DUP,"_footprints.bw"])), group = GROUPNAMES),
-        concatenation_bed_collapsed_sorted = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed"),
-        genome_fai = ancient(''.join([re.sub(".gz", "", genome_fasta, count=0, flags=0),".fai"]))
+        tobias_FootprintScores = lambda w: expand(os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs", ''.join(["{group}_mapq", MAPQ, "_sorted_woMT_", DUP, "_footprints.bw"])), group = COMPARISON_GROUPS[w.comparison]),
+        peaks = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted.bed"),
+        peaks_woChr = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted_woChr.bed"),
+        genome_fai = ancient(''.join([re.sub(".gz", "", genome_fasta, count=0, flags=0), ".fai"]))
     output:
-        bindetect_results = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/bindetect_results.{ext}"), comparison = COMPARISONNAMES, ext=['txt', 'xlsx']),
-        TF_beds = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/{TF}/beds/{TF}_all.bed"), comparison = COMPARISONNAMES, TF=TFNAMES),
-        concatenation_bed_collapsed_sorted_woChr = os.path.join(SUMMARYDIR, "Sample_comparisons/Peak_comparison/all_samples_peaks_concatenation_collapsed_sorted_woChr.bed")
+        bindetect_results = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{{comparison}}/bindetect_results.{ext}"), ext=['txt', 'xlsx']),
+        TF_beds = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{{comparison}}/{TF}/beds/{TF}_all.bed"), TF=TFNAMES)
     params:
-        comparisons = ' '.join(COMPARISONNAMES),
         motifs_file = config["differential_TF_binding"]["motifs_file"],
-        foot_score_ext = ''.join(["_mapq", MAPQ, "_sorted_woMT_",DUP,"_footprints.bw"]),
-        diff_dir = re.sub("/","",DIFFTFDIR),
+        diff_dir = re.sub("/", "", DIFFTFDIR),
         genome = genome_fasta,
-        factors = ' '.join(TFNAMES),
-        #cores = min(max(workflow.cores, 5), 5)
+        cond_names = lambda w: ' '.join(COMPARISON_GROUPS[w.comparison]),
+        signals = lambda w: ' '.join(expand(
+            os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs",
+                         ''.join(["{group}_mapq", MAPQ, "_sorted_woMT_", DUP, "_footprints.bw"])),
+            group = COMPARISON_GROUPS[w.comparison])),
         cores = workflow.cores
     threads:
         workflow.cores
     benchmark:
-        "benchmarks/diffTFbinding_BINDetect/diffTFbinding_BINDetect---all.comparisons_benchmark.txt"
+        "benchmarks/diffTFbinding_BINDetect/diffTFbinding_BINDetect---{comparison}_benchmark.txt"
     priority: 10
     shell:
         """
-        printf '\033[1;36mPerforming differential analyses for TF binding with TOBIAS (BINDetect)...\\n\033[0m'
+        printf '\033[1;36mBINDetect for {wildcards.comparison}...\\n\033[0m'
         mkdir -p {params.diff_dir}/C_BINDetect_merged_BAMs/log/
 
-        sed 's/chr//' {input.concatenation_bed_collapsed_sorted} | uniq | sort -k1,1 -k2,2n -k 3,3n > {output.concatenation_bed_collapsed_sorted_woChr}
         CHR=$(grep -i chr {input.genome_fai} | wc -l)
+        if [[ $CHR -gt 0 ]]; then PEAKS={input.peaks}; else PEAKS={input.peaks_woChr}; fi
 
-        if [[ $CHR -gt 0 ]]
-        then
-            PEAKS={input.concatenation_bed_collapsed_sorted}
-        else
-            PEAKS={output.concatenation_bed_collapsed_sorted_woChr}
-        fi
-
-
-        for i in {params.comparisons}
-        do
-            COMPS=$(echo $i | sed 's/[.]vs[.]/ /')
-            BIGWIGS=$(echo $i | sed 's/[.]vs[.]/{params.foot_score_ext} /' | sed 's/$/{params.foot_score_ext}/' | sed 's/^/{params.diff_dir}\\/B_corrected_scores_merged_BAMs\\//' | sed 's/ / {params.diff_dir}\\/B_corrected_scores_merged_BAMs\\//')
-
-            echo '   '- ${{i}}': processing...'
-
-            $CONDA_PREFIX/bin/TOBIAS BINDetect \
+        $CONDA_PREFIX/bin/TOBIAS BINDetect \
             --motifs {params.motifs_file} \
-            --signals $BIGWIGS \
+            --signals {params.signals} \
             --genome {params.genome} \
             --peaks $PEAKS \
-            --outdir {params.diff_dir}/C_BINDetect_merged_BAMs/${{i}} \
-            --cond_names $COMPS \
+            --outdir {params.diff_dir}/C_BINDetect_merged_BAMs/{wildcards.comparison} \
+            --cond_names {params.cond_names} \
             --naming id \
-            --cores {params.cores} &> {params.diff_dir}/C_BINDetect_merged_BAMs/log/${{i}}_BINDetect.log
-
-            echo '   '- ${{i}}': completed.'
-        done
+            --cores {params.cores} &> {params.diff_dir}/C_BINDetect_merged_BAMs/log/{wildcards.comparison}_BINDetect.log
         """
 
 # ----------------------------------------------------------------------------------------
@@ -1908,7 +1913,7 @@ rule Rscript_density_profiles:
         # Import metadata
         metadata = data.table::fread(results, nrows = 1, stringsAsFactors = F, sep = '@', h = F)$V2
         metadata = gsub(x = metadata, pattern = '[{]|[}]', replacement = '')
-        metadata = gsub(x = metadata, pattern = '\\\s', replacement = '_')
+        metadata = gsub(x = metadata, pattern = '\\\\s', replacement = '_')
         metadata = gsub(x = metadata, pattern = '[\\"],\\"', replacement = ',')
         metadata = gsub(x = metadata, pattern = '\\":\\"', replacement = ':')
         metadata = gsub(x = metadata, pattern = '\\":', replacement = ':')
@@ -2439,7 +2444,7 @@ rule GATK_plot_SNPs:
         merged_SNPs = os.path.join(GATKDIR, ''.join(["VCF/SNP/all.samples_", DUP, "_gatk-snp_filtered.DP", str(config["somatic_variants"]["DP_snp_threshold"]), ".QUAL", str(config["somatic_variants"]["QUAL_snp_threshold"]), "_annotated.txt"]))
     params:
         sample = SAMPLENAMES,
-        plot_title = ''.join(["SNPs (on ", DUP, " bams): DP > ", str(config["somatic_variants"]["DP_snp_threshold"]), ", QUAL > ", str(config["somatic_variants"]["QUAL_snp_threshold"]), ", w\o 0|0"])
+        plot_title = ''.join(["SNPs (on ", DUP, " bams): DP > ", str(config["somatic_variants"]["DP_snp_threshold"]), ", QUAL > ", str(config["somatic_variants"]["QUAL_snp_threshold"]), ", w\\o 0|0"])
     output:
         snp_plot = os.path.join(GATKDIR, "SV_count_plots/all.samples_SNP_counts_plot.pdf")
     threads: 1
@@ -2621,7 +2626,7 @@ rule GATK_plot_InDels:
         merged_indels_annotated = os.path.join(GATKDIR, ''.join(["VCF/InDel/all.samples_", DUP, "_gatk-indel_filtered.DP", str(config["somatic_variants"]["DP_indel_threshold"]), ".QUAL", str(config["somatic_variants"]["QUAL_indel_threshold"]), "_annotated.txt"]))
     params:
         sample = SAMPLENAMES,
-        plot_title = ''.join(["InDels (on ", DUP, " bams): DP > ", str(config["somatic_variants"]["DP_indel_threshold"]), ", QUAL > ", str(config["somatic_variants"]["QUAL_indel_threshold"]), ", w\o 0|0"])
+        plot_title = ''.join(["InDels (on ", DUP, " bams): DP > ", str(config["somatic_variants"]["DP_indel_threshold"]), ", QUAL > ", str(config["somatic_variants"]["QUAL_indel_threshold"]), ", w\\o 0|0"])
     output:
         indel_plot = os.path.join(GATKDIR, "SV_count_plots/all.samples_InDel_counts_plot.pdf")
     threads: 1
