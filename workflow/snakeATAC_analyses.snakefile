@@ -1771,30 +1771,30 @@ rule diffTFbinding_BINDetect:
         signals = lambda w: ' '.join(expand(
             os.path.join(DIFFTFDIR, "B_corrected_scores_merged_BAMs",
                          ''.join(["{group}_mapq", MAPQ, "_sorted_woMT_", DUP, "_footprints.bw"])),
-            group = COMPARISON_GROUPS[w.comparison])),
-        cores = workflow.cores
+            group = COMPARISON_GROUPS[w.comparison]))
+    log:
+        out = os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/log/{comparison}_BINDetect.log")
     threads:
-        workflow.cores
+        max(workflow.cores // 2, 1)
     benchmark:
         "benchmarks/diffTFbinding_BINDetect/diffTFbinding_BINDetect---{comparison}_benchmark.txt"
     priority: 10
     shell:
         """
         printf '\033[1;36mBINDetect for {wildcards.comparison}...\\n\033[0m'
-        mkdir -p {params.diff_dir}/C_BINDetect_merged_BAMs/log/
 
         CHR=$(grep -i chr {input.genome_fai} | wc -l)
         if [[ $CHR -gt 0 ]]; then PEAKS={input.peaks}; else PEAKS={input.peaks_woChr}; fi
 
         $CONDA_PREFIX/bin/TOBIAS BINDetect \
-            --motifs {params.motifs_file} \
-            --signals {params.signals} \
-            --genome {params.genome} \
-            --peaks $PEAKS \
-            --outdir {params.diff_dir}/C_BINDetect_merged_BAMs/{wildcards.comparison} \
-            --cond_names {params.cond_names} \
-            --naming id \
-            --cores {params.cores} &> {params.diff_dir}/C_BINDetect_merged_BAMs/log/{wildcards.comparison}_BINDetect.log
+        --motifs {params.motifs_file} \
+        --signals {params.signals} \
+        --genome {params.genome} \
+        --peaks $PEAKS \
+        --outdir {params.diff_dir}/C_BINDetect_merged_BAMs/{wildcards.comparison} \
+        --cond_names {params.cond_names} \
+        --naming id \
+        --cores {threads} &> {log.out}
         """
 
 # ----------------------------------------------------------------------------------------
