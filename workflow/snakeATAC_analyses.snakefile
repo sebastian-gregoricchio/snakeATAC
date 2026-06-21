@@ -1824,7 +1824,7 @@ if (str(config["differential_TF_binding"]["whitelist"]) == ""):
             """
             printf '\033[1;36m{params.TF_label}: computing DeepTools matrix...\\n\033[0m'
 
-            computeMatrix reference-point \
+            $CONDA_PREFIX/bin/computeMatrix reference-point \
             --regionsFileName {input.TFbed} \
             --scoreFileName {params.bigWigs} \
             --outFileName {output.matrix} \
@@ -1868,7 +1868,7 @@ else:
 
             bedtools intersect -a {input.TFbed} -b {parmas.whitelist} -wa > {output.reduced_bed}
 
-            computeMatrix reference-point \
+            $CONDA_PREFIX/bin/computeMatrix reference-point \
             --regionsFileName {output.reduced_bed} \
             --scoreFileName {params.bigWigs} \
             --outFileName {output.matrix} \
@@ -1885,142 +1885,166 @@ else:
             """
 # ----------------------------------------------------------------------------------------
 
-rule Rscript_density_profiles:
-    output:
-        script = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/density_profile_script.R")
-    threads: 1
-    benchmark:
-        "benchmarks/Rscript_density_profiles/Rscript_density_profiles_benchmark.txt"
-    run:
-        shell("printf '\033[1;36mGenerating the Rscript used to plot density profiles...\\n\033[0m'")
-
-        x = """# Load parameters
-        args = commandArgs(trailingOnly = TRUE)
-
-        results = as.character(strsplit(grep('--MATRIX*', args, value = TRUE), split = '=')[[1]][[2]])
-        plotFile = as.character(strsplit(grep('--PLOT*', args, value = TRUE), split = '=')[[1]][[2]])
-
-        #########################
-
-        # Load libraries
-        require(dplyr)
-        require(ggplot2)
-
-
-        # read matrix
-        matrix = as.data.frame(data.table::fread(results, skip = 1))
-
-        # Import metadata
-        metadata = data.table::fread(results, nrows = 1, stringsAsFactors = F, sep = '@', h = F)$V2
-        metadata = gsub(x = metadata, pattern = '[{]|[}]', replacement = '')
-        metadata = gsub(x = metadata, pattern = '\\\\s', replacement = '_')
-        metadata = gsub(x = metadata, pattern = '[\\"],\\"', replacement = ',')
-        metadata = gsub(x = metadata, pattern = '\\":\\"', replacement = ':')
-        metadata = gsub(x = metadata, pattern = '\\":', replacement = ':')
-        metadata = gsub(x = metadata, pattern = ',\\"', replacement = '@')
-        metadata = gsub(x = metadata, pattern = '\\"', replacement = '')
-        metadata = gsub(x = metadata, pattern = '[,]missing', replacement = '@missing')
-        metadata = gsub(x = metadata, pattern = '[,]sort', replacement = '@sort')
-        metadata = gsub(x = metadata, pattern = '[,]unscaled', replacement = '@unscaled')
-
-        metadata = unlist(lapply(strsplit(x = metadata, split = '@')[[1]], function(x)(strsplit(x, ':'))))
-
-        metadata = data.frame('parameters' = metadata[seq(1, length(metadata),2)],
-                              'values' = metadata[seq(2, length(metadata),2)],
-                              stringsAsFactors = F)
-
-        # Collect info
-        samples = unlist(strsplit(gsub('[[]|[]]','',metadata[21,2]), ','))
-        upstream = as.numeric(unique(unlist(strsplit(gsub('[[]|[]]','',metadata[1,2]), ','))))
-        downstream = as.numeric(unique(unlist(strsplit(gsub('[[]|[]]','',metadata[2,2]), ','))))
-        boundaries = as.numeric(unique(unlist(strsplit(gsub('[[]|[]]','',metadata[22,2]), ','))))
-
-        range = (-upstream):downstream
-        range = range[range != 0]
-
-
-        # Re-shape table
-        matrix.reshaped = data.frame()
-
-        for (i in 1:length(samples)) {
-          start.col = 7 + boundaries[i]
-          end.col = 7 + boundaries[i+1] - 1
-
-          mat = matrix[,c(1:6,start.col:end.col)]
-          colnames(mat)[7:ncol(mat)] = range
-
-          mat$sample = samples[i]
-          matrix.reshaped = rbind(matrix.reshaped, mat)
-        }
-
-        matrix.reshaped =
-          reshape2::melt(data = matrix.reshaped,
-                         id.vars = c('V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'sample'),
-                         variable.name = 'position',
-                         value.name = 'score') %>%
-          dplyr::mutate(position = as.character(as.character(position)))
-
-
-        # # normalize within 0-1 if required
-        # if (normalize.zero.one == TRUE) {
-        #   matrix.reshaped$score = (matrix.reshaped$score - min(matrix.reshaped$score, na.rm = T))
-        #   matrix.reshaped$score = matrix.reshaped$score / max(matrix.reshaped$score, na.rm = T)
-        # }
-
-
-        # generate stats
-        mat.plot =
-          matrix.reshaped %>%
-          dplyr::group_by(sample, position) %>%
-          dplyr::summarise(n = n(),
-                           mean = mean(score, na.rm = T),
-                           sd = sd(score, na.rm = T),
-                           .groups = 'keep') %>%
-          dplyr::mutate(sem = sd / sqrt(n)) %>%
-          dplyr::mutate(position = as.numeric(position),
-                        sample = factor(sample, levels = samples))
-
-
-        # Make plot
-        plot =
-          ggplot(data = mat.plot,
-                 aes(x = position,
-                     y = mean,
-                     ymin = mean - sem,
-                     ymax = mean + sem,
-                     color = sample,
-                     fill = sample)) +
-          geom_ribbon(alpha = 0.15, color = NA) +
-          geom_line() +
-          ylab('Mean Footprint score \u00b1 SEM') +
-          xlab('Distance from motif center [bp]') +
-          ggtitle(factor) +
-          #ylim(c(0,1)) +
-          theme_classic() +
-          theme(axis.text = element_text(color = 'black'),
-                plot.title = element_text(hjust = 0.5, color = 'black'),
-                axis.ticks = element_line(color = 'black'))
-
-
-        pdf(file = plotFile, height = 5, width = 6)
-        print(plot)
-        invisible(dev.off())"""
-
-        with open(str(output.script),"w+") as f:
-          f.writelines(x)
+# rule Rscript_density_profiles:
+#     output:
+#         script = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/density_profile_script.R")
+#     threads: 1
+#     benchmark:
+#         "benchmarks/Rscript_density_profiles/Rscript_density_profiles_benchmark.txt"
+#     run:
+#         shell("printf '\033[1;36mGenerating the Rscript used to plot density profiles...\\n\033[0m'")
+#
+#         x = """# Load parameters
+#         args = commandArgs(trailingOnly = TRUE)
+#
+#         results = as.character(strsplit(grep('--MATRIX*', args, value = TRUE), split = '=')[[1]][[2]])
+#         plotFile = as.character(strsplit(grep('--PLOT*', args, value = TRUE), split = '=')[[1]][[2]])
+#
+#         #########################
+#
+#         # Load libraries
+#         require(dplyr)
+#         require(ggplot2)
+#
+#
+#         # read matrix
+#         matrix = as.data.frame(data.table::fread(results, skip = 1))
+#
+#         # Import metadata
+#         metadata = data.table::fread(results, nrows = 1, stringsAsFactors = F, sep = '@', h = F)$V2
+#         metadata = gsub(x = metadata, pattern = '[{]|[}]', replacement = '')
+#         metadata = gsub(x = metadata, pattern = '\\\\s', replacement = '_')
+#         metadata = gsub(x = metadata, pattern = '[\\"],\\"', replacement = ',')
+#         metadata = gsub(x = metadata, pattern = '\\":\\"', replacement = ':')
+#         metadata = gsub(x = metadata, pattern = '\\":', replacement = ':')
+#         metadata = gsub(x = metadata, pattern = ',\\"', replacement = '@')
+#         metadata = gsub(x = metadata, pattern = '\\"', replacement = '')
+#         metadata = gsub(x = metadata, pattern = '[,]missing', replacement = '@missing')
+#         metadata = gsub(x = metadata, pattern = '[,]sort', replacement = '@sort')
+#         metadata = gsub(x = metadata, pattern = '[,]unscaled', replacement = '@unscaled')
+#
+#         metadata = unlist(lapply(strsplit(x = metadata, split = '@')[[1]], function(x)(strsplit(x, ':'))))
+#
+#         metadata = data.frame('parameters' = metadata[seq(1, length(metadata),2)],
+#                               'values' = metadata[seq(2, length(metadata),2)],
+#                               stringsAsFactors = F)
+#
+#         # Collect info
+#         samples = unlist(strsplit(gsub('[[]|[]]','',metadata[21,2]), ','))
+#         upstream = as.numeric(unique(unlist(strsplit(gsub('[[]|[]]','',metadata[1,2]), ','))))
+#         downstream = as.numeric(unique(unlist(strsplit(gsub('[[]|[]]','',metadata[2,2]), ','))))
+#         boundaries = as.numeric(unique(unlist(strsplit(gsub('[[]|[]]','',metadata[22,2]), ','))))
+#
+#         range = (-upstream):downstream
+#         range = range[range != 0]
+#
+#
+#         # Re-shape table
+#         matrix.reshaped = data.frame()
+#
+#         for (i in 1:length(samples)) {
+#           start.col = 7 + boundaries[i]
+#           end.col = 7 + boundaries[i+1] - 1
+#
+#           mat = matrix[,c(1:6,start.col:end.col)]
+#           colnames(mat)[7:ncol(mat)] = range
+#
+#           mat$sample = samples[i]
+#           matrix.reshaped = rbind(matrix.reshaped, mat)
+#         }
+#
+#         matrix.reshaped =
+#           reshape2::melt(data = matrix.reshaped,
+#                          id.vars = c('V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'sample'),
+#                          variable.name = 'position',
+#                          value.name = 'score') %>%
+#           dplyr::mutate(position = as.character(as.character(position)))
+#
+#
+#         # # normalize within 0-1 if required
+#         # if (normalize.zero.one == TRUE) {
+#         #   matrix.reshaped$score = (matrix.reshaped$score - min(matrix.reshaped$score, na.rm = T))
+#         #   matrix.reshaped$score = matrix.reshaped$score / max(matrix.reshaped$score, na.rm = T)
+#         # }
+#
+#
+#         # generate stats
+#         mat.plot =
+#           matrix.reshaped %>%
+#           dplyr::group_by(sample, position) %>%
+#           dplyr::summarise(n = n(),
+#                            mean = mean(score, na.rm = T),
+#                            sd = sd(score, na.rm = T),
+#                            .groups = 'keep') %>%
+#           dplyr::mutate(sem = sd / sqrt(n)) %>%
+#           dplyr::mutate(position = as.numeric(position),
+#                         sample = factor(sample, levels = samples))
+#
+#
+#         # Make plot
+#         plot =
+#           ggplot(data = mat.plot,
+#                  aes(x = position,
+#                      y = mean,
+#                      ymin = mean - sem,
+#                      ymax = mean + sem,
+#                      color = sample,
+#                      fill = sample)) +
+#           geom_ribbon(alpha = 0.15, color = NA) +
+#           geom_line() +
+#           ylab('Mean Footprint score \u00b1 SEM') +
+#           xlab('Distance from motif center [bp]') +
+#           ggtitle(factor) +
+#           #ylim(c(0,1)) +
+#           theme_classic() +
+#           theme(axis.text = element_text(color = 'black'),
+#                 plot.title = element_text(hjust = 0.5, color = 'black'),
+#                 axis.ticks = element_line(color = 'black'))
+#
+#
+#         pdf(file = plotFile, height = 5, width = 6)
+#         print(plot)
+#         invisible(dev.off())"""
+#
+#         with open(str(output.script),"w+") as f:
+#           f.writelines(x)
 
 # ----------------------------------------------------------------------------------------
 
+# rule plot_density_profiles:
+#     input:
+#         matrix = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TFnames}_single.base.scores_per.region.gz"),
+#         script = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/density_profile_script.R")
+#     output:
+#         plot = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{TFnames}_density_profile.pdf")
+#     params:
+#         TF_label = "{TFnames}",
+#         matrix = os.path.join(home_dir, DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TFnames}_single.base.scores_per.region.gz"),
+#         plot = os.path.join(home_dir, DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{TFnames}_density_profile.gz")
+#     log:
+#         out = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/log/{TFnames}_density_profile.log")
+#     threads: 1
+#     benchmark:
+#         "benchmarks/plot_density_profiles/plot_density_profiles---{TFnames}_benchmark.txt"
+#     shell:
+#         """
+#         printf '\033[1;36m{params.TF_label}: plot density profile...\\n\033[0m'
+#
+#         unset R_LIBS_USER
+#         unset R_LIBS
+#         $CONDA_PREFIX/bin/Rscript {input.script} \
+#         --MATRIX={params.matrix} \
+#         --PLOT={params.plot} &> {log.out}
+#         """
+
 rule plot_density_profiles:
     input:
-        matrix = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TFnames}_single.base.scores_per.region.gz"),
-        script = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/density_profile_script.R")
+        matrix = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TFnames}_single.base.scores_per.region.gz")
     output:
         plot = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{TFnames}_density_profile.pdf")
     params:
         TF_label = "{TFnames}",
-        matrix = os.path.join(home_dir, DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TFnames}_single.base.scores_per.region.gz"),
-        plot = os.path.join(home_dir, DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{TFnames}_density_profile.gz")
+        score_type = config["differential_TF_binding"]["score_type_density_profiles"]
     log:
         out = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/log/{TFnames}_density_profile.log")
     threads: 1
@@ -2030,11 +2054,17 @@ rule plot_density_profiles:
         """
         printf '\033[1;36m{params.TF_label}: plot density profile...\\n\033[0m'
 
-        unset R_LIBS_USER
-        unset R_LIBS
-        $CONDA_PREFIX/bin/Rscript {input.script} \
-        --MATRIX={params.matrix} \
-        --PLOT={params.plot} &> {log.out}
+        $CONDA_PREFIX/bin/plotProfile \
+        --matrixFile {input.matrix} \
+        --outFileName {output.plot} \
+        --averageType {params.score_type} \
+        --plotType se \
+        --perGroup \
+        --refPointLabel 'motif center' \
+        --regionsLabel {params.TF_label} \
+        --legendLocation best \
+        --colors firebrick navy \
+        --plotFileFormat pdf &> {log.out}
         """
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>

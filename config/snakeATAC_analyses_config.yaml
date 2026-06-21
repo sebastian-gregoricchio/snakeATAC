@@ -61,6 +61,7 @@ differential_TF_binding:
   motifs_file: ""
   whitelist: ""
   flanking_bp: 60
+  score_type_density_profiles: "mean" # "mean", "median", "min", "max", "sum" and "std"
 
 
 
