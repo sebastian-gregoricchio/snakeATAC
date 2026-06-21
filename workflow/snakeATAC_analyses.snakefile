@@ -76,6 +76,7 @@ if (eval(str(config["differential_TF_binding"]["perform_differential_analyses"])
     groups_tb = pd.read_csv(str(config["differential_TF_binding"]["sample_groups_table"]), sep='\t+', engine='python')
     groups_tb = groups_tb.iloc[:,0:2].set_axis(['sample_id', 'group'], axis=1)
     GROUPNAMES = list(numpy.unique(list(groups_tb.group)))
+    GROUP_SAMPLES = {g: list(groups_tb.sample_id[groups_tb.group == g]) for g in GROUPNAMES}
 
     # check if comparison groups are in the comparison table
     comp_groups = list(numpy.unique(list(chain.from_iterable(config["differential_TF_binding"]["group_comparisons"]))))
@@ -105,11 +106,12 @@ if (eval(str(config["differential_TF_binding"]["perform_differential_analyses"])
     bindetect_results_output = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/bindetect_results.{ext}"), comparison = COMPARISONNAMES, ext=['txt', 'xlsx'])
     diff_TF_output = expand(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{TF}_density_profile.pdf"), TF=TFNAMES)
 
-    norm_bw_average = expand(''.join(["03_Normalization/RPM_normalized_merged/{group}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized_merged.bs10.bw"]), group = GROUPNAMES)
+    norm_bw_average = expand(''.join(["03_Normalization/RPM_normalized_merged/{group}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized_merged.bs", str(config["differential_TF_binding"]["merged_bigwig_binSize"]), ".bw"]), group = GROUPNAMES)
 else:
     GROUPNAMES = SAMPLENAMES
     COMPARISONNAMES = SAMPLENAMES
     COMPARISON_GROUPS = []
+    GROUP_SAMPLES = []
     TFNAMES = SAMPLENAMES
     diff_TF_output = []
     bindetect_results_output = []
@@ -464,42 +466,30 @@ rule bam_shifting_and_RPM_normalization:
 # Average bigWigs by group
 rule compute_bigwigAverage:
     input:
-        norm_bw = expand(''.join(["03_Normalization/RPM_normalized/{sample}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized.bw"]), sample = SAMPLENAMES)
+        norm_bw = lambda w: expand(''.join(["03_Normalization/RPM_normalized/{sample}_mapq", MAPQ, "_woMT_", DUP, "_shifted_RPM.normalized.bw"]), sample = GROUP_SAMPLES[w.GROUPS])
     output:
-        norm_bw_average = expand(''.join(["03_Normalization/RPM_normalized_merged/{group}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized_merged.bs", str(config["differential_TF_binding"]["merged_bigwig_binSize"]), ".bw"]), group = GROUPNAMES)
+        norm_bw_average = ''.join(["03_Normalization/RPM_normalized_merged/{GROUPS}_mapq", MAPQ, "_woMT_", DUP, "_shifted_RPM.normalized_merged.bs", str(config["differential_TF_binding"]["merged_bigwig_binSize"]), ".bw"])
     params:
-        groups_tb = str(config["differential_TF_binding"]["sample_groups_table"]),
         binSize = str(config["differential_TF_binding"]["merged_bigwig_binSize"]),
-        groups = ' '.join(GROUPNAMES),
-        bw_input_suffix = "_mapq"+MAPQ+"_woMT_"+DUP+"_shifted_RPM.normalized.bw",
-        bw_output_suffix = "_mapq"+MAPQ+"_woMT_"+DUP+"_shifted_RPM.normalized_merged.bs"+str(config["differential_TF_binding"]["merged_bigwig_binSize"])+".bw",
-        blacklist = BLACKLIST,
+        blacklist = BLACKLIST
     threads:
         workflow.cores
     log:
-        out = expand("03_Normalization/RPM_normalized_merged/log/{group}_bigwigAverage.log", group = GROUPNAMES)
+        out = "03_Normalization/RPM_normalized_merged/log/{GROUPS}_bigwigAverage.log"
     benchmark:
-        "benchmarks/compute_bigwigAverage/compute_bigwigAverage---allGroups_benchmark.txt"
+        "benchmarks/compute_bigwigAverage/compute_bigwigAverage---{GROUPS}_benchmark.txt"
     priority: 50
     shell:
         """
-        printf '\033[1;36mMerging bigwigs by group...\\n\033[0m'
+        printf '\033[1;36mMerging bigwigs for group {wildcards.GROUPS}...\\n\033[0m'
 
-        for i in {params.groups}
-        do
-            SAMPLES=$(grep $i {params.groups_tb} | cut -f 1 | uniq)
-            BIGWGS=$(echo $(for s in $SAMPLES; do echo 03_Normalization/RPM_normalized/${{s}}{params.bw_input_suffix}; done))
-
-            echo '  - '${{i}}': '$SAMPLES
-
-            $CONDA_PREFIX/bin/bigwigAverage \
-            -b $BIGWGS \
-            --binSize {params.binSize} \
-            --outFileName 03_Normalization/RPM_normalized_merged/${{i}}{params.bw_output_suffix} \
-            --outFileFormat bigwig \
-            --blackListFileName {params.blacklist} \
-            -p {threads} &> 03_Normalization/RPM_normalized_merged/log/${{i}}_bigwigAverage.log
-        done
+        $CONDA_PREFIX/bin/bigwigAverage \
+        -b {input.norm_bw} \
+        --binSize {params.binSize} \
+        --outFileName {output.norm_bw_average} \
+        --outFileFormat bigwig \
+        --blackListFileName {params.blacklist} \
+        -p {threads} &> {log.out}
         """
 # ----------------------------------------------------------------------------------------
 
@@ -1633,40 +1623,24 @@ rule TOBIAS_FootprintScores:
 # Merge bams
 rule diffTFbinding_mergeBAMs:
     input:
-        dedup_BAM = expand(os.path.join("01_BAM_filtered", ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"])), sample = SAMPLENAMES),
-        dedup_BAM_index = expand(os.path.join("01_BAM_filtered", ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bai"])), sample = SAMPLENAMES)
+        dedup_BAM = lambda w: expand(os.path.join("01_BAM_filtered", ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"])), sample = GROUP_SAMPLES[w.GROUPS]),
+        dedup_BAM_index = lambda w: expand(os.path.join("01_BAM_filtered", ''.join(["{sample}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bai"])), sample = GROUP_SAMPLES[w.GROUPS])
     output:
-        merged_BAM = expand(os.path.join(DIFFTFDIR, "A_merged_BAMs", ''.join(["{group}_mapq", MAPQ, "_sorted_woMT_", DUP, "_merged.bam"])), group = GROUPNAMES),
-        merged_BAM_idx = expand(os.path.join(DIFFTFDIR, "A_merged_BAMs", ''.join(["{group}_mapq", MAPQ, "_sorted_woMT_", DUP, "_merged.bam.bai"])), group = GROUPNAMES)
-    params:
-        groups = ' '.join(GROUPNAMES),
-        bam_ext = ''.join(["_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"]),
-        bam_merged_ext = ''.join(["_mapq", MAPQ, "_sorted_woMT_", DUP, "_merged.bam"]),
-        sample_config_table = str(config["differential_TF_binding"]["sample_groups_table"]),
-        outdir = DIFFTFDIR+"A_merged_BAMs"
+        merged_BAM = os.path.join(DIFFTFDIR, "A_merged_BAMs", ''.join(["{GROUPS}_mapq", MAPQ, "_sorted_woMT_", DUP, "_merged.bam"])),
+        merged_BAM_idx = os.path.join(DIFFTFDIR, "A_merged_BAMs", ''.join(["{GROUPS}_mapq", MAPQ, "_sorted_woMT_", DUP, "_merged.bam.bai"]))
     threads:
-        max((workflow.cores-1), 1)
+        max((workflow.cores - 1), 1)
     log:
-        out = os.path.join(DIFFTFDIR,"A_merged_BAMs/log/all.groups_mergeBAMs.log")
+        out = os.path.join(DIFFTFDIR, "A_merged_BAMs/log/{GROUPS}_mergeBAMs.log")
     benchmark:
-        "benchmarks/diffTFbinding_mergeBAMs/diffTFbinding_mergeBAMs---all_groups_benchmark.txt"
+        "benchmarks/diffTFbinding_mergeBAMs/diffTFbinding_mergeBAMs---{GROUPS}_benchmark.txt"
     priority: 1
     shell:
         """
-        printf '\033[1;36mMerging BAMs per group...\\n\033[0m'
+        printf '\033[1;36mMerging BAMs for group {wildcards.GROUPS}...\\n\033[0m'
 
-        for i in {params.groups}
-        do
-            FILES=$(grep -w $i {params.sample_config_table} | cut -f 1 | sed 's/$/{params.bam_ext}/' | sed 's/^/01_BAM_filtered\\//')
-            FILESJOINT="${{FILES[*]}}"
-
-            $CONDA_PREFIX/bin/samtools merge \
-            -@ {threads} \
-            -f -o {params.outdir}/${{i}}{params.bam_merged_ext} \
-            $FILES &> {log.out}
-
-            $CONDA_PREFIX/bin/samtools index -@ {threads} {params.outdir}/${{i}}{params.bam_merged_ext}
-        done
+        $CONDA_PREFIX/bin/samtools merge -@ {threads} -f -o {output.merged_BAM} {input.dedup_BAM} &> {log.out}
+        $CONDA_PREFIX/bin/samtools index -@ {threads} {output.merged_BAM}
         """
 
 # ----------------------------------------------------------------------------------------
