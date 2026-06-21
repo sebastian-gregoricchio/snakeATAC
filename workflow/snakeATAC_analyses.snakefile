@@ -2063,7 +2063,6 @@ rule plot_density_profiles:
         --refPointLabel 'motif center' \
         --regionsLabel {params.TF_label} \
         --legendLocation best \
-        --colors firebrick navy \
         --plotFileFormat pdf &> {log.out}
         """
 
