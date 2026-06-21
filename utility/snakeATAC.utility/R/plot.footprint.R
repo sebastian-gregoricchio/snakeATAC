@@ -10,6 +10,14 @@
 #' @param normalize.zero.one Logical value indicating whether profiles should be normalized between 0 and 1. Default: \code{FALSE}, raw data.
 #' @param white.list A path to a bed file, or a bed file in data.frame or GRanges format. This region list will be used to filter the full table and only the average over these regions will be plotted. Default: \code{NULL}, no filtering.
 #'
+#' @import ggplot2
+#' @import dplyr
+#' @importFrom data.table fread
+#' @importFrom reshape2 melt
+#' @importFrom GenomicRanges makeGRangesFromDataFrame
+#' @importFrom IRanges countOverlaps
+#' @importFrom ggtext element_markdown
+#'
 #' @return A ggplot object.
 #'
 #' @export plot.footprint
@@ -21,17 +29,12 @@ plot.footprint =
            normalize.zero.one = FALSE,
            white.list = NULL) {
 
-    # Load libraries
-    require(dplyr)
-    require(ggplot2)
-
-
     # read matrix
     matrix = as.data.frame(data.table::fread(matrix.gz, skip = 1))
 
 
     # Import metadata
-    metadata = data.table::fread(matrix.gz, nrows = 1, stringsAsFactors = F, sep = "@", h = F)$V2
+    metadata = data.table::fread(matrix.gz, nrows = 1, stringsAsFactors = FALSE, sep = "@", h = FALSE)$V2
     metadata = gsub(x = metadata, pattern = "[{]|[}]", replacement = "")
     metadata = gsub(x = metadata, pattern = "\\s", replacement = "_")
     metadata = gsub(x = metadata, pattern = "[\"],\"", replacement = ",")
@@ -96,18 +99,18 @@ plot.footprint =
       if ("data.frame" %in% class(white.list)) {
         white.ls = white.list[,1:3]
         colnames(white.ls) = c("seqnames", "start", "end")
-        white.ls$seqnames = gsub("chr", "", white.ls$seqnames, ignore.case = T)
+        white.ls$seqnames = gsub("chr", "", white.ls$seqnames, ignore.case = TRUE)
         white.ls = GenomicRanges::makeGRangesFromDataFrame(white.ls)
       } else if ("character" %in% class(white.list)) {
-        white.ls = data.table::fread(white.list, data.table = F)[,1:3]
+        white.ls = data.table::fread(white.list, data.table = FALSE)[,1:3]
         colnames(white.ls) = c("seqnames", "start", "end")
-        white.ls$seqnames = gsub("chr", "", white.ls$seqnames, ignore.case = T)
+        white.ls$seqnames = gsub("chr", "", white.ls$seqnames, ignore.case = TRUE)
         white.ls = GenomicRanges::makeGRangesFromDataFrame(white.ls)
       } else if ("GRanges" %in% class(white.list)) {
         white.ls = as.data.frame(white.list)
-        white.ls$seqnames = gsub("chr", "", white.ls$seqnames, ignore.case = T)
+        white.ls$seqnames = gsub("chr", "", white.ls$seqnames, ignore.case = TRUE)
         white.ls = GenomicRanges::makeGRangesFromDataFrame(white.ls)
-      } else {return(warning("The 'white.list' must be a bed in Granges, data.frame format or the path to a bed file."))}
+      } else {stop("The 'white.list' must be a bed in Granges, data.frame format or the path to a bed file.")}
     }
 
 
@@ -115,9 +118,9 @@ plot.footprint =
     if (!is.null(white.list)) {
       matrix.bed = unique(matrix[,1:3])
       colnames(matrix.bed) = c("seqnames", "start", "end")
-      matrix.bed$seqnames = gsub("chr", "", matrix.bed$seqnames, ignore.case = T)
+      matrix.bed$seqnames = gsub("chr", "", matrix.bed$seqnames, ignore.case = TRUE)
       matrix.bed = dplyr::mutate(unique(matrix.bed), name = paste(seqnames, start, end, sep="_"))
-      matrix.bed_gr = GenomicRanges::makeGRangesFromDataFrame(matrix.bed, keep.extra.columns = T) }
+      matrix.bed_gr = GenomicRanges::makeGRangesFromDataFrame(matrix.bed, keep.extra.columns = TRUE) }
 
 
     ## Filter matrix for white.list
@@ -126,7 +129,7 @@ plot.footprint =
       matrix.bed.filtered = matrix.bed[keep.region,]
 
       matrix.reshaped =
-        dplyr::inner_join(matrix.reshaped %>% dplyr::mutate(V1 = gsub("chr","",V1, ignore.case = T)),
+        dplyr::inner_join(matrix.reshaped %>% dplyr::mutate(V1 = gsub("chr","",V1, ignore.case = TRUE)),
                           matrix.bed.filtered[,1:3],
                           by = c("V1" = "seqnames", "V2" = "start", "V3" = "end"))
     }
@@ -134,8 +137,8 @@ plot.footprint =
 
     # normalize within 0-1 if required
     if (normalize.zero.one == TRUE) {
-      matrix.reshaped$score = (matrix.reshaped$score - min(matrix.reshaped$score, na.rm = T))
-      matrix.reshaped$score = matrix.reshaped$score / max(matrix.reshaped$score, na.rm = T)
+      matrix.reshaped$score = (matrix.reshaped$score - min(matrix.reshaped$score, na.rm = TRUE))
+      matrix.reshaped$score = matrix.reshaped$score / max(matrix.reshaped$score, na.rm = TRUE)
     }
 
 
@@ -168,16 +171,13 @@ plot.footprint =
       scale_color_manual(values = colors) +
       ylab("mean Footprint score \u00b1 SEM") +
       xlab("Distance from motif center [bp]") +
-      ggtitle(factor) +
+      ggtitle(paste0("**",factor,"**")) +
       #ylim(c(0,1)) +
       theme_classic() +
       theme(axis.text = element_text(color = "black"),
-            plot.title = element_text(hjust = 0.5, color = "black"),
+            plot.title = ggtext::element_markdown(hjust = 0.5, color = "black"),
             axis.ticks = element_line(color = "black"),
             aspect.ratio = 1)
 
     return(plot)
-    # pdf(file = plot.file, height = 7, width = 7)
-    # print(plot)
-    # invisible(dev.off())
   }

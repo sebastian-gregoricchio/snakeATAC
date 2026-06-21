@@ -17,6 +17,16 @@
 #' @param excluded.samples String vector indicating the list of sample IDs to exclude from the plot. Default: \code{NULL}.
 #' @param return.cluster.object Logical value indicating whether the clustering and distance object should be returned along with the plot. Default: \code{FALSE}, only the plot is returned.
 #'
+#' @importFrom reshape2 melt
+#' @import viridis
+#' @import ggplot2
+#' @import dplyr
+#' @importFrom ggtext element_markdown
+#' @import legendry
+#' @import ggdendro
+#' @importFrom data.table fread
+#' @importFrom scales squish
+#'
 #' @return Either a ggplot object, or a list with ggplot object, distance and hclust objects
 #'
 #' @export correlation.heatmap
@@ -42,28 +52,24 @@ correlation.heatmap =
            excluded.samples = NULL,
            return.cluster.object = FALSE) {
 
-    ## LIBRARIES
-    require(ggplot2)
-    require(dplyr)
-
-
+    
     ## Check parameters
     if (!(tolower(dendrogram.position) %in% c("top", "bottom", "left", "right", "rigth"))) {
-      return(warning("The 'dendrogram.position' must be a value among: 'top', 'bottom', 'left', 'right'."))
+      stop("The 'dendrogram.position' must be a value among: 'top', 'bottom', 'left', 'right'.")
     } else if (tolower(dendrogram.position) == "rigth") {
       dendrogram.position = "right"
     }
 
 
     if (!(clustering.method %in% c("ward.D", "ward.D2", "single", "complete", "average", "mcquitty", "median", "centroid"))) {
-      return(warning("The 'clustering.method' should be (an unambiguous abbreviation of) one of: 'ward.D', 'ward.D2', 'single', 'complete', 'average' (= UPGMA), 'mcquitty' (= WPGMA), 'median' (= WPGMC) or 'centroid' (= UPGMC)."))
+      stop("The 'clustering.method' should be (an unambiguous abbreviation of) one of: 'ward.D', 'ward.D2', 'single', 'complete', 'average' (= UPGMA), 'mcquitty' (= WPGMA), 'median' (= WPGMC) or 'centroid' (= UPGMC).")
     }
 
 
 
     ## Read correlation matrix
     if ("character" %in% class(correlation.matrix)) {
-      corr_matrix = data.table::fread(correlation.matrix, data.table = F, check.names = F)
+      corr_matrix = data.table::fread(correlation.matrix, data.table = FALSE, check.names = FALSE)
       colnames(corr_matrix) = gsub("'","",colnames(corr_matrix))
       rownames(corr_matrix) = gsub("'","",corr_matrix$V1)
       corr_matrix$V1 = gsub("'","",corr_matrix$V1)
@@ -78,10 +84,9 @@ correlation.heatmap =
     ## Filter-out excluded samples (if required)
     if (!is.null(excluded.samples)) {
       if (FALSE %in% (excluded.samples %in% rownames(corr_matrix))) {
-        message("Warning message:")
-        message("At least one of the 'excluded samples' is not present in the ID list.\n")
-        message(paste0("Missing 'excluded.samples': \n", paste0(excluded.samples[!(excluded.samples %in% rownames(corr_matrix))], collapse = ", "), ".\n"))
-        message(paste0("IDs available: \n", paste0(sort(rownames(corr_matrix)), collapse = ", "), "."))
+        warning(paste0("At least one of the 'excluded samples' is not present in the ID list.\n",
+                       "Missing 'excluded.samples': \n", paste0(excluded.samples[!(excluded.samples %in% rownames(corr_matrix))], collapse = ", "), ".\n",
+                       "IDs available: \n", paste0(sort(rownames(corr_matrix)), collapse = ", "), "."))
       }
       corr_matrix = corr_matrix[!(rownames(corr_matrix) %in% excluded.samples), !(colnames(corr_matrix) %in% excluded.samples)]
     }
@@ -118,6 +123,7 @@ correlation.heatmap =
       scale_fill_gradientn(name = "Correlation\ncoefficient",
                            colours = palette,
                            limits = correlation.scale.limits,
+                           oob = scales::squish,
                            na.value = palette[ncol(palette)]) +
       coord_fixed() +
       ggtitle(label = plot.title, subtitle = plot.subtitle) +
@@ -135,9 +141,9 @@ correlation.heatmap =
       corr_heatmap =
         corr_heatmap +
         scale_x_discrete(expand = c(0,0)) +
-        ggh4x::scale_y_dendrogram(hclust = corr_clust,
-                                  expand = c(0,0),
-                                  position = tolower(dendrogram.position)) +
+        legendry::scale_y_dendro(clust = corr_clust,
+                                 expand = c(0,0),
+                                 position = tolower(dendrogram.position)) +
         theme(axis.ticks.y = element_line(color = dendrogram.color,
                                           linewidth = dendrogram.linewidth),
               axis.ticks.x = element_blank())
@@ -145,9 +151,9 @@ correlation.heatmap =
       corr_heatmap =
         corr_heatmap +
         scale_y_discrete(expand = c(0,0)) +
-        ggh4x::scale_x_dendrogram(hclust = corr_clust,
-                                  expand = c(0,0),
-                                  position = tolower(dendrogram.position)) +
+        legendry::scale_x_dendro(clust = corr_clust,
+                                 expand = c(0,0),
+                                 position = tolower(dendrogram.position)) +
         theme(axis.ticks.x = element_line(color = dendrogram.color,
                                           linewidth = dendrogram.linewidth),
               axis.ticks.y = element_blank())

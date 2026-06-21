@@ -16,6 +16,11 @@
 #' @param labels.max.overlaps Numeric value indicating of maximum labels overlapping allowed (passed to \code{ggrepel}). Default: \code{100}.
 #' @param extra.labels Vector of other motifs to display, irrespectively by their significance. Default: \code{"none"}.
 #'
+#' @import ggplot2
+#' @import dplyr
+#' @import ggrepel
+#' @importFrom ggtext element_markdown 
+#'
 #' @return A ggplot object.
 #'
 #' @export plot.BINDetect.volcano
@@ -36,14 +41,11 @@ plot.BINDetect.volcano =
            labels.max.overlaps = 100,
            extra.labels = "none") {
 
-    # Libs
-    require(ggplot2)
-    require(dplyr)
-    if (add.signif.lables == TRUE){require(ggrepel)}
+    
 
     # Read table if required
     if ("character" %in% class(results)) {
-      results = dplyr::mutate(read.delim(results, h=T), motif_id = gsub(motif.pattern, "",motif_id))
+      results = dplyr::mutate(read.delim(results, h=TRUE), motif_id = gsub(motif.pattern, "",motif_id))
     } else {
       results = as.data.frame(results)
     }
@@ -61,7 +63,7 @@ plot.BINDetect.volcano =
     # Add Factor column for points colors
     results =
       dplyr::mutate(results,
-                    diff.status = factor(ifelse(signif == "True" | signif == T,
+                    diff.status = factor(ifelse(signif == "True" | signif == TRUE,
                                                 yes = ifelse(sign(change) == 1,
                                                              yes = paste("Higher in", condition.A),
                                                              no = paste("Higher in", condition.B)),
@@ -90,12 +92,14 @@ plot.BINDetect.volcano =
       scale_color_manual(values = colors, name = "Differential binding status", drop = FALSE) +
       scale_size_continuous(name = "|Differential binding score|") +
       ggtitle(title) +
-      ylab("-log~10~(*P*-value)") +
+      ylab("-log<sub>10</sub>(*P*-value)") +
       xlab(paste0("Differential binding score [", condition.A, " - ", condition.B, "]")) +
+      guides(color = guide_legend(override.aes = list(size = 3))) +
       theme_classic() +
       theme(axis.title.y = ggtext::element_markdown(color = "black"),
-            axis.text = ggtext::element_markdown(color = "black"),
-            plot.title = element_text(hjust = 0.5),
+            axis.text.x = ggtext::element_markdown(color = "black"),
+            axis.text.y = ggtext::element_markdown(color = "black"),
+            plot.title = ggtext::element_markdown(color = "black", hjust = 0.5),
             axis.ticks = element_line(color = "black"))
 
     # make plot simmetric
@@ -114,7 +118,7 @@ plot.BINDetect.volcano =
                                       y = -log10(pvalue),
                                       label = motif_id,
                                       color = diff.status),
-                        show.legend = F,
+                        show.legend = FALSE,
                         min.segment.length = labels.min.segment.length,
                         force = labels.repel.force,
                         max.overlaps = labels.max.overlaps)
