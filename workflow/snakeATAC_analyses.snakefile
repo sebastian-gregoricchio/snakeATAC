@@ -1791,7 +1791,7 @@ if (str(config["differential_TF_binding"]["whitelist"]) == ""):
             out = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/log/{TFnames}_deeptools_matrix.out"),
             err = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/log/{TFnames}_deeptools_matrix.err")
         threads:
-            max((workflow.cores / 5), 1)
+            max((workflow.cores // 5), 1)
         benchmark:
             "benchmarks/deeptools_matrices/deeptools_matrices---{TFnames}_benchmark.txt"
         shell:
@@ -1833,7 +1833,7 @@ else:
             out = os.path.join(config["OUTDIR"], "deeptools_matrices/log", "{TFnames}_deeptools_matrix.out"),
             err = os.path.join(config["OUTDIR"], "deeptools_matrices/log", "{TFnames}_deeptools_matrix.err")
         threads:
-            max((workflow.cores / len(TF)), 1)
+            max((workflow.cores // 5), 1)
         benchmark:
             "benchmarks/deeptools_matrices_whiteList/deeptools_matrices_whiteList---{TFnames}_benchmark.txt"
         shell:
