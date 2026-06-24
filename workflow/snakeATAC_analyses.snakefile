@@ -104,7 +104,13 @@ if (eval(str(config["differential_TF_binding"]["perform_differential_analyses"])
     #diff_TF_output = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/bindetect_results.{ext}"), comparison = COMPARISONNAMES, ext=['txt', 'xlsx'])
     #diff_TF_output = expand(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TF}_single.base.scores_per.region.gz"), TF=TFNAMES)
     bindetect_results_output = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/bindetect_results.{ext}"), comparison = COMPARISONNAMES, ext=['txt', 'xlsx'])
-    diff_TF_output = expand(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{TF}_density_profile.pdf"), TF=TFNAMES)
+
+    if len(GROUPNAMES) > 2:
+        density_profiles_perComparison = expand(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{comparison}/{TF}_{comparison}_density_profile.pdf"), TF = TFNAMES, comparison = COMPARISONNAMES)
+    else:
+        density_profiles_perComparison = []
+
+    diff_TF_output = expand(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/all_groups/{TF}_all_groups_density_profile.pdf"), TF=TFNAMES)
 
     norm_bw_average = expand(''.join(["03_Normalization/RPM_normalized_merged/{group}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized_merged.bs", str(config["differential_TF_binding"]["merged_bigwig_binSize"]), ".bw"]), group = GROUPNAMES)
 else:
@@ -114,6 +120,7 @@ else:
     GROUP_SAMPLES = []
     TFNAMES = SAMPLENAMES
     diff_TF_output = []
+    density_profiles_perComparison = []
     bindetect_results_output = []
     norm_bw_average = []
 
@@ -202,6 +209,7 @@ rule AAA_initialization:
         CNA_corrected_bw = CNA_corrected_bw,
         rawScores_hetamap_peaks = hetamap_peaks,
         diff_TF_output = diff_TF_output,
+        density_profiles_perComparison = density_profiles_perComparison,
         bindetect_results_output = bindetect_results_output,
         norm_bw_average = norm_bw_average,
         snp = snp,
@@ -2011,16 +2019,16 @@ else:
 #         --PLOT={params.plot} &> {log.out}
 #         """
 
-rule plot_density_profiles:
+rule plot_density_profiles_allGroups:
     input:
         matrix = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TFnames}_single.base.scores_per.region.gz")
     output:
-        plot = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{TFnames}_density_profile.pdf")
+        plot = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/all_groups/{TFnames}_all_groups_density_profile.pdf")
     params:
         TF_label = "{TFnames}",
         score_type = config["differential_TF_binding"]["score_type_density_profiles"]
     log:
-        out = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/log/{TFnames}_density_profile.log")
+        out = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/all_groups/log/{TFnames}_all_groups_density_profile.log")
     threads: 1
     benchmark:
         "benchmarks/plot_density_profiles/plot_density_profiles---{TFnames}_benchmark.txt"
@@ -2039,6 +2047,48 @@ rule plot_density_profiles:
         --legendLocation best \
         --plotFileFormat pdf &> {log.out}
         """
+
+# -------------------------------------------------------------------------------------------------------------------------------------
+
+
+rule deeptools_density_profiles_perComparison:
+    input:
+        matrix = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TFnames}_single.base.scores_per.region.gz")
+    output:
+        subset_matrix = temp(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{comparison}/{TFnames}_{comparison}_subset.gz")),
+        plot = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{comparison}/{TFnames}_{comparison}_density_profile.pdf")
+    params:
+        groups = lambda w: ' '.join(COMPARISON_GROUPS[w.comparison]),
+        score_type = config["differential_TF_binding"]["score_type_density_profiles"],
+        TF_label = "{TFnames}"
+    log:
+        out = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{comparison}/log/{TFnames}_{comparison}_density_profile.log")
+    benchmark:
+        "benchmarks/deeptools_density_profiles_perComparison/deeptools_density_profiles_perComparison---{TFnames}_{comparison}_benchmark.txt"
+    threads: 1
+    priority: 50
+    shell:
+        """
+        printf '\033[1;36m{params.TF_label} ({wildcards.comparison}): subsetting matrix and plotting profile...\\n\033[0m'
+
+        $CONDA_PREFIX/bin/computeMatrixOperations subset \
+        -m {input.matrix} \
+        --samples {params.groups} \
+        -o {output.subset_matrix} &> {log.out}
+
+        $CONDA_PREFIX/bin/plotProfile \
+        --matrixFile {output.subset_matrix} \
+        --outFileName {output.plot} \
+        --averageType {params.score_type} \
+        --plotType se \
+        --perGroup \
+        --refPointLabel 'motif center' \
+        --regionsLabel {params.TF_label} \
+        --legendLocation best \
+        --colors firebrick navy \
+        --plotFileFormat pdf &> {log.out}
+        """
+
 
 # >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
