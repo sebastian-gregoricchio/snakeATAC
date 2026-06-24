@@ -2034,7 +2034,7 @@ rule plot_density_profiles_allGroups:
         "benchmarks/plot_density_profiles/plot_density_profiles---{TFnames}_benchmark.txt"
     shell:
         """
-        printf '\033[1;36m{params.TF_label}: plot density profile...\\n\033[0m'
+        printf '\033[1;36m{params.TF_label}: plot density profile (all groups)...\\n\033[0m'
 
         $CONDA_PREFIX/bin/plotProfile \
         --matrixFile {input.matrix} \
