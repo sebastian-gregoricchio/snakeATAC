@@ -995,7 +995,7 @@ rule Lorenz_curve_merge_plots:
         -e "combined_table = data.frame()" \
         -e "for (i in 1:length(tables)) (combined_table = rbind(combined_table, dplyr::mutate(read.delim(tables[i], skip = 2, h=F), sample = gsub('_Lorenz_raw[.]counts_deeptools[.]plotFingreprint[.]txt','',basename(tables[i]))) %>% dplyr::rename(counts = V1) %>% dplyr::arrange(counts) %>% dplyr::mutate(cumulative_sum = cumsum(counts), rank = (1:nrow(.))/nrow(.)) %>% dplyr::mutate(cumulative_sum = cumulative_sum/max(cumulative_sum))))" \
         -e "pdf('{params.dir}{output.lorenz_plot_ggplot}', width = 8, height = 6.5)" \
-        -e "ggplot2::ggplot(data = combined_table, ggplot2::aes(x = rank, y = cumulative_sum, color = sample)) + ggplot2::geom_line() + ggplot2::ggtitle('Fingerprints (Lorenz curves) all samples') + ggplot2::xlim(c(0,1)) + ggplot2::xlab('Normalized rank') + ggplot2::ylab('Fraction with reference to the bin with highest coverage') + ggplot2::theme_classic() + ggplot2::theme(axis.text = ggplot2::element_text(color = 'black'), axis.ticks = ggplot2::element_line(color = 'black'))" \
+        -e "ggplot2::ggplot(data = combined_table, ggplot2::aes(x = rank, y = cumulative_sum, color = sample)) + ggplot2::geom_abline(slope = 1, intercept = 0, color = 'gray', linetype = 2) + ggplot2::geom_line() + ggplot2::ggtitle('Fingerprints (Lorenz curves) all samples') + ggplot2::xlim(c(0,1)) + ggplot2::xlab('Normalized rank') + ggplot2::ylab('Fraction with reference to the bin with highest coverage') + ggplot2::theme_classic() + ggplot2::theme(axis.text = ggplot2::element_text(color = 'black'), axis.ticks = ggplot2::element_line(color = 'black'))" \
         -e "invisible(dev.off())" &> {log.ggplotcombine}
         """
 # ----------------------------------------------------------------------------------------
@@ -2031,7 +2031,7 @@ rule plot_density_profiles_allGroups:
         out = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/all_groups/log/{TFnames}_all_groups_density_profile.log")
     threads: 1
     benchmark:
-        "benchmarks/plot_density_profiles/plot_density_profiles---{TFnames}_benchmark.txt"
+        "benchmarks/plot_density_profiles/plot_density_profiles_allGroups---{TFnames}_benchmark.txt"
     shell:
         """
         printf '\033[1;36m{params.TF_label}: plot density profile (all groups)...\\n\033[0m'
@@ -2055,7 +2055,7 @@ rule deeptools_density_profiles_perComparison:
     input:
         matrix = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TFnames}_single.base.scores_per.region.gz")
     output:
-        subset_matrix = temp(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{comparison}/{TFnames}_{comparison}_subset.gz")),
+        subset_matrix = temp(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{comparison}/temp_{TFnames}_{comparison}_subset.gz")),
         plot = os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{comparison}/{TFnames}_{comparison}_density_profile.pdf")
     params:
         groups = lambda w: ' '.join(COMPARISON_GROUPS[w.comparison]),
