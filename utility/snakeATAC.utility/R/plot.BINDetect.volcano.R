@@ -19,15 +19,13 @@
 #' @import ggplot2
 #' @import dplyr
 #' @import ggrepel
-#' @importFrom ggtext element_markdown 
+#' @importFrom ggtext element_markdown
 #'
 #' @return A ggplot object.
 #'
 #' @export plot.BINDetect.volcano
-#'
-#'
-#'
-#'
+
+
 plot.BINDetect.volcano =
   function(results,
            motif.pattern = "_(MOUSE|HUMAN)[.]H[0-9]*MO",
@@ -41,7 +39,7 @@ plot.BINDetect.volcano =
            labels.max.overlaps = 100,
            extra.labels = "none") {
 
-    
+
 
     # Read table if required
     if ("character" %in% class(results)) {
@@ -94,7 +92,7 @@ plot.BINDetect.volcano =
       ggtitle(title) +
       ylab("-log<sub>10</sub>(*P*-value)") +
       xlab(paste0("Differential binding score [", condition.A, " - ", condition.B, "]")) +
-      guides(color = guide_legend(override.aes = list(size = 3))) +
+      guides(color = guide_legend(override.aes = list(size = 5))) +
       theme_classic() +
       theme(axis.title.y = ggtext::element_markdown(color = "black"),
             axis.text.x = ggtext::element_markdown(color = "black"),

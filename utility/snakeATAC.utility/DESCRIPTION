@@ -1,7 +1,7 @@
 Package: snakeATAC.utility
 Type: Package
 Title: Complementary utilities for snakeATAC 
-Version: 0.1.1
+Version: 1.0.0
 Author: Sebastian Gregoricchio
 Maintainer: Sebastian Gregoricchio <sebastian.gregoricchio@gmail.com>
 Description: Function to reanalyze the results obtained by the snakeATAC pipeline
@@ -10,9 +10,12 @@ Depends:
 	R (>= 4.0.3)
 biocViews:
 Imports:
-  BiocManager, data.table, dplyr, GenomicRanges, ggdendro, ggplot2, ggrepel, ggtext, IRanges, legendry, reshape2, scales, viridis
+  data.table, dplyr, GenomicRanges, ggdendro, ggplot2, ggrepel, ggtext, IRanges, legendry, methods, reshape2, scales, stats, viridis
+Suggests:
+  BiocManager, remotes
 Encoding: UTF-8
 LazyData: true
+LazyDataCompression: xz
 RoxygenNote: 8.0.0
 URL:
 	https://github.com/sebastian-gregoricchio/snakeATAC/tree/main/utility/snakeATAC.utility
