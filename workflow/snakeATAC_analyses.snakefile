@@ -101,16 +101,19 @@ if (eval(str(config["differential_TF_binding"]["perform_differential_analyses"])
     TFNAMES=[re.sub('\n', '', i) for i in id]
 
     # outputs for differentials
-    #diff_TF_output = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/bindetect_results.{ext}"), comparison = COMPARISONNAMES, ext=['txt', 'xlsx'])
-    #diff_TF_output = expand(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/matrices/{TF}_single.base.scores_per.region.gz"), TF=TFNAMES)
     bindetect_results_output = expand(os.path.join(DIFFTFDIR, "C_BINDetect_merged_BAMs/{comparison}/bindetect_results.{ext}"), comparison = COMPARISONNAMES, ext=['txt', 'xlsx'])
 
-    if len(GROUPNAMES) > 2:
-        density_profiles_perComparison = expand(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{comparison}/{TF}_{comparison}_density_profile.pdf"), TF = TFNAMES, comparison = COMPARISONNAMES)
-    else:
-        density_profiles_perComparison = []
+    if (eval(str(config["differential_TF_binding"]["generate_density_profiles"]))):
+        if len(GROUPNAMES) > 2:
+            density_profiles_perComparison = expand(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/{comparison}/{TF}_{comparison}_density_profile.pdf"), TF = TFNAMES, comparison = COMPARISONNAMES)
+        else:
+            density_profiles_perComparison = []
 
-    diff_TF_output = expand(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/all_groups/{TF}_all_groups_density_profile.pdf"), TF=TFNAMES)
+        all_groups_density_profiles = expand(os.path.join(DIFFTFDIR, "D_density_profiles_merged_BAMs/density_plots/all_groups/{TF}_all_groups_density_profile.pdf"), TF=TFNAMES)
+
+    else:
+        all_groups_density_profiles = []
+        density_profiles_perComparison = []
 
     norm_bw_average = expand(''.join(["03_Normalization/RPM_normalized_merged/{group}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized_merged.bs", str(config["differential_TF_binding"]["merged_bigwig_binSize"]), ".bw"]), group = GROUPNAMES)
 else:
@@ -119,11 +122,11 @@ else:
     COMPARISON_GROUPS = []
     GROUP_SAMPLES = []
     TFNAMES = SAMPLENAMES
-    diff_TF_output = []
-    density_profiles_perComparison = []
     bindetect_results_output = []
     norm_bw_average = []
-
+    all_groups_density_profiles = []
+    density_profiles_perComparison = []
+    
 
 # generation of global wildcard_constraints
 wildcard_constraints:
@@ -208,9 +211,9 @@ rule AAA_initialization:
         lorenz_plot_ggplot = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf"),
         CNA_corrected_bw = CNA_corrected_bw,
         rawScores_hetamap_peaks = hetamap_peaks,
-        diff_TF_output = diff_TF_output,
-        density_profiles_perComparison = density_profiles_perComparison,
         bindetect_results_output = bindetect_results_output,
+        all_groups_density_profiles = all_groups_density_profiles,
+        density_profiles_perComparison = density_profiles_perComparison,
         norm_bw_average = norm_bw_average,
         snp = snp,
         indels = indels
