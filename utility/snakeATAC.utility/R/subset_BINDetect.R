@@ -1,4 +1,4 @@
-#' @title title
+#' @title subset_BINDetect
 #'
 #' @description
 #' Subset TOBIAS BINDetect results to regions overlapping a BED file.
@@ -223,7 +223,7 @@ subset_BINDetect = function(bindetect_dir,
 #' @importFrom methods is
 #' @importFrom data.table fread as.data.table
 #' @import IRanges
-#' @import package GenomicRanges
+#' @import GenomicRanges
 #' @noRd
 
 

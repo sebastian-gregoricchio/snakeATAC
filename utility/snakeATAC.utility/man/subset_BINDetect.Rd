@@ -2,7 +2,7 @@
 % Please edit documentation in R/subset_BINDetect.R
 \name{subset_BINDetect}
 \alias{subset_BINDetect}
-\title{title}
+\title{subset_BINDetect}
 \usage{
 subset_BINDetect(
   bindetect_dir,
