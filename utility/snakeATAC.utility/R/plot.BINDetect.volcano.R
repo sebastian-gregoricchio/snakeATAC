@@ -111,7 +111,7 @@ plot.BINDetect.volcano =
     if (add.signif.lables == TRUE) {
       plot =
         plot +
-        geom_text_repel(data = results %>% filter(diff.status != "NS" | motif_id %in% extra.labels),
+        geom_text_repel(data = results %>% dplyr::filter(diff.status != "NS" | motif_id %in% extra.labels),
                         mapping = aes(x = change,
                                       y = -log10(pvalue),
                                       label = motif_id,
