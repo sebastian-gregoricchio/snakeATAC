@@ -10,9 +10,30 @@ Depends:
 	R (>= 4.0.3)
 biocViews:
 Imports:
-  data.table, dplyr, GenomicRanges, ggdendro, ggplot2, ggpubr, ggrepel, ggtext, IRanges, legendry, lubridate, methods, purrr, reshape2, reticulate, scales, stats, tidyr, viridis
+  data.table,
+  dplyr,
+  GenomicRanges,
+  ggdendro,
+  ggplot2,
+  ggpubr,
+  ggrepel,
+  ggtext,
+  IRanges,
+  jsonlite,
+  legendry,
+  lubridate,
+  methods,
+  purrr,
+  reshape2,
+  reticulate,
+  scales,
+  stats, 
+  tidyr,
+  universalmotif,
+  viridis
 Suggests:
-  BiocManager, remotes
+  BiocManager,
+  remotes
 Encoding: UTF-8
 LazyData: true
 LazyDataCompression: xz

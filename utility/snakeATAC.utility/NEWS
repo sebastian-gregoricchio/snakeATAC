@@ -1,0 +1,21 @@
+# snakeATAC.utility
+
+#### v1.0.0 - July 6<sup>th</sup> 2026
+- added function to filter `BINDetect` results
+- added function to filter hocomoco motifs
+- added functions to plot PCA
+
+<br>
+
+#### v0.1.0 - 2024
+First release.
+
+
+
+<br />
+<br />
+
+-----------------------------------------------------------------------
+
+##### Contributors
+[![contributors](https://badges.pufler.dev/contributors/sebastian-gregoricchio/snakeATAC?size=50&padding=5&bots=true)](https://sebastian-gregoricchio.github.io/)
