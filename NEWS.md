@@ -7,10 +7,15 @@ title: "changeLog"
 
 <br>
 
-
-#### [v0.1.1](https://github.com/sebastian-gregoricchio/snakeATAC/releases/tag/0.1.1) - June 24<sup>th</sup> 2026
+#### [v0.1.2](https://github.com/sebastian-gregoricchio/snakeATAC/releases/tag/0.1.2) - July 5<sup>th</sup> 2026
 * Optimization of the differential TF footprint rules
 * Fixing bugs in the plotting of the footprint profiles
+
+<br>
+
+
+#### [v0.1.1](https://github.com/sebastian-gregoricchio/snakeATAC/releases/tag/0.1.1) - November 3<sup>rd</sup> 2023
+* A major updated will follow: this release is to stabilize the current version which will be deprecated later.
 
 <br>
 
