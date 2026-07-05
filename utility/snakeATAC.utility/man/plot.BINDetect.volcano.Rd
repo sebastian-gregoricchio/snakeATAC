@@ -39,7 +39,7 @@
 
 \item{labels.max.overlaps}{Numeric value indicating of maximum labels overlapping allowed (passed to \code{ggrepel}). Default: \code{100}.}
 
-\item{extra.labels}{Vector of other motifs to display, irrespectively by their significance. Default: \code{"none"}.}
+\item{extra.labels}{Vector of other motifs to display, irrespective of their significance. Default: \code{"none"}.}
 }
 \value{
 A ggplot object.
