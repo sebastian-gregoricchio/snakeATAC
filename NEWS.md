@@ -2,8 +2,9 @@
 title: "changeLog"
 ---
 
-# snakeATAC [<img src="https://sebastian-gregoricchio.github.io/snakeATAC/snakeATAC_logo.svg" align="right" height = 150/>](https://sebastian-gregoricchio.github.io/snakeATAC)
+# snakeATAC [<img src="https://raw.githubusercontent.com/sebastian-gregoricchio/snakeATAC/main/resources/snakeATAC_logo.svg" align="right" height = 150/>](https://sebastian-gregoricchio.github.io/snakeATAC)
 [![forks](https://img.shields.io/github/forks/sebastian-gregoricchio/snakeATAC?style=social)](https://github.com/sebastian-gregoricchio/snakeATAC/fork)
+
 
 <br>
 
