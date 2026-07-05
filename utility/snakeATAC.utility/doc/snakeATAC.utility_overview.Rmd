@@ -1,0 +1,401 @@
+---
+title: "*snakeATAC.utility* overview"
+date: "Last update: `r format(Sys.time(), '%d<sup>th</sup> %B, %Y')`"
+author:
+- name: "Sebastian Gregoricchio, Ph.D."
+  affiliation:
+    - "Netherlands Cancer Institute, Oncogenomics division, Amsterdam - Netherlands"
+  email: 's.gregoricchio@nki.nl'
+package: "*[snakeATAC.utility](https://github.com/sebastian-gregoricchio/snakeATAC/tree/main/utility/snakeATAC.utility)*"
+output:
+  prettydoc::html_pretty:
+    highlight: github
+    math: katex
+    theme: cayman
+    number_sections: true
+    toc: true
+    toc_depth: 4
+    fig_caption: true
+    fontsize: 11pt
+vignette: >
+  %\VignetteIndexEntry{snakeATAC.utility overview}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+<style>
+body {
+text-align: justify}
+</style>
+
+
+```{r setup, include = FALSE}
+# knitr::opts_chunk$set(collapse = TRUE, comment = ">", dev = "svg",
+#                       warning = F, message = F, fig.align = "center",
+#                       rows.print=12)
+#knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_
+
+if (Sys.info()[["sysname"]] == "Darwin") {
+  knitr::opts_chunk$set(collapse = TRUE, comment = ">",
+                        warning = F, message = F, fig.align = "center",
+                        rows.print = 12, dev = "png", dpi = 96)
+} else {
+  knitr::opts_chunk$set(collapse = TRUE, comment = ">",
+                        warning = F, message = F, fig.align = "center",
+                        rows.print = 12, dev = "png", dpi = 96)
+}
+
+#options(tibble.print_min = 4L, tibble.print_max = 4L)
+
+
+# Load libraries required
+require(snakeATAC.utility)
+```
+
+![license](https://img.shields.io/badge/License-GPLv3-blue.png)
+
+----------------------------------------------------------
+
+# **Introduction** {#intro}
+The R-package *snakeATAC.utility* is a companion R utilities for the `snakeATAC` pipeline, a Snakemake workflow for the analysis of ATAC-seq data. Provides functions to import, re-analyse and re-plot pipeline outputs — including sample-level quality control (principal component analysis and correlation heatmaps from genome-wide coverage), transcription-factor footprints and differential-binding volcanoes from TOBIAS results, filtering of HOCOMOCO motif collections, and summaries of pipeline runtime and resource usage — so that results can be inspected and figures customized directly in R.
+
+<br>
+
+
+## Citation
+If you use this package, please cite:
+
+<div class="warning" style='padding:2.5%; background-color:#c1eac4; color:#226a27; margin-left:5%; margin-right:5%; border-radius:15px;'>
+<span>
+<font size="-0.5">
+<p style='margin-top:1em; text-align:left'> **Citation** </p>
+
+<div style="margin-left:2%; margin-right:2%; text-align: justify">
+<i>snakeATAC.utility</i>: ...<br>
+Gregoricchio S.<br>
+<i>XYZ</i> (20XY)<br>
+doi: <a href="https://doi.org/XYZ/XYZ">XYZ</a>
+</div>
+</font>
+
+</span>
+</div>
+
+<br>
+
+```{r citation, message=FALSE, warning=FALSE}
+citation("snakeATAC.utility")
+```
+
+<br>
+
+----------------------------------------------------------
+
+# **Filter `BINDetect` results** {#filterbindetect}
+The `snakeATAC` differential TF-binding step runs `TOBIAS BINDetect` on a pair of group-level footprint tracks and writes, per comparison, a `bindetect_results.txt` table plus one sub-folder per transcription factor (TF).<br>
+A common follow-up question is: *within a specific set of regions* (a promoter set, a set of differential peaks, a ChIP-seq target list, ...), which TFs are differentially bound between the two conditions?
+
+The function `subset_BINDetect` from `snakeATAC.utility`:
+- Overlaps the existing per-site output with your BED and re-summarises
+- Normalization kept genome-wide (as computed on the full peak set)
+- Volcano centering: inherited from the full run
+- Interprets the effect relative to a genome-wide background
+
+>**NOTE**: In BINDetect the score normalization between
+conditions, the bound/unbound threshold, and the background model for the
+p-values are all estimated from the **whole** peak set. If your regions are
+biased (e.g. generally more accessible in one condition), rebuilding the
+background from that subset alone skews the distribution and de-centres the
+volcano. The function avoids this by keeping the background genome-wide.
+
+<br>
+
+## Inputs from a `snakeATAC` run
+The function starts from the differential TF-binding outputs produced by the `snakeATAC`(/`TOBIAS`) pipeline (folder `05b_Differential_TF_binding_TOBIAS`).
+
+`subset_BINDetect()` reads the per-TF `*_overview.txt` files, keeps the binding sites overlapping `roi_bed` (regions of interest bed), and recomputes per-TF summaries. The per-site log2 fold changes are used exactly as BINDetect computed them (already normalized between conditions); by default each TF is tested against a **genome-wide** background of per-site log2 fold changes.
+
+```{r, eval=FALSE}
+res_subset <-
+  subset_BINDetect(bindetect_dir = bindetect_dir, # path
+                   bed = roi_bed, # GRanges, file_path or data.frame/data.table
+                   condition1 = "groupA",
+                   condition2 = "groupB",
+                   background = "all", # genome-wide null (default)
+                   summary_stat = "mean",
+                   bound_in_any = FALSE,
+                   min_sites = 10,
+                   top_quantile = 0.05)
+
+head(res_subset) # one row per TF, sorted by padj then |subset_change|
+sum(res_subset$top) # TFs in the volcano tails
+```
+
+The `subset_change` column is the mean (or median) of the subset per-site log2 fold changes; negative values mean higher binding in `condition2`. It is deliberately **not** named `change`, because it is a re-derived quantity — a Wilcoxon test of the subset against the background — and is not numerically identical to BINDetect's own change/p-value machinery. If you need numbers
+directly comparable to a real run, re run TOBIAS manually using your subset-regions as `--peaks`.
+
+<br>
+
+## Choosing the background
+The `background` argument decides *which question you answer*:
+
+* `background = "all"` (default): the null is every binding site genome-wide. Question: **within my regions, which TFs are differentially bound between the two conditions?** This matches the "true background = full peak set" logic.
+* `background = "outside"`: the null is, per TF, that TF's sites **not** overlapping `roi_bed`. Question: **for which TFs is the differential binding specific to my regions** relative to the rest of the genome?
+
+```{r background-outside, eval=FALSE}
+res_specific <- subset_bindetect_by_bed(
+  bindetect_dir = bindetect_dir,
+  bed = roi_bed,
+  condition1 = "groupA",
+  condition2 = "groupB",
+  background = "outside")
+```
+
+<br>
+
+## The `bound_in_any` filter
+Setting `bound_in_any = TRUE` keeps only sites predicted bound in at least one condition before summarising. This is a reasonable way to drop empty sites, but note it **biases the log2fc distribution**: it removes unbound–unbound sites, which cluster near zero, and therefore shifts the top-quantile selection. It is exposed as an option rather than hard-coded; compare both if in doubt.
+
+```{r bound-filter, eval=FALSE}
+res_bound <-
+  subset_BINDetect(bindetect_dir = bindetect_dir,
+                   bed = roi_bed,
+                   condition1 = "groupA",
+                   condition2 = "groupB",
+                   bound_in_any = TRUE)
+```
+
+<br>
+
+## Selecting top TFs
+The `top` column mirrors the BINDetect volcano highlight: a TF is flagged when its `subset_change` falls in the lower/upper `top_quantile` tails and/or its `-log10(padj)` exceeds the upper tail. Remember that BINDetect works on **motifs/TFs, not genes** — with a few hundred motifs, "top 5%" is only a handful of TFs. To rank *sites* instead, work from the per-site `log2fc` column in the `*_overview.txt` files directly.
+
+```{r top, eval=FALSE}
+top_TFs <- res_subset[res_subset$top, c("TF", "subset_change", "padj")]
+top_TFs
+```
+
+<br>
+
+----------------------------------------------------------
+
+# **Filter HOCOMOCO motifs** {#filterhoco}
+`filter.hocomoco.jaspar()` reads a HOCOMOCO motif collection in JASPAR format and
+returns the subset you care about -- selected by gene symbol, by motif ID, and/or
+by motif quality -- as a list of `universalmotif` objects, optionally written back
+out in JASPAR format.
+
+Selection by gene is bridged through the HOCOMOCO *annotation* file rather than by
+parsing the motif ID, because a motif-ID prefix is a UniProt entry-name mnemonic
+and not always the HGNC gene symbol (`ANDR` &rarr; *AR*, `AP2A` &rarr; *TFAP2A*,
+`SRBP2` &rarr; *SREBF2*). Matching the raw prefix would silently drop those factors.
+
+<br>
+
+## Getting the HOCOMOCO files
+Two files are used, both available from the **Downloads** page at <https://hocomoco.autosome.org> (this generic link always resolves to the current release):
+
+- the motif collection in **JASPAR format** (e.g. `H14CORE_jaspar_format.txt`), which is the input to filter;
+- the **annotation** file (e.g. `H14CORE_annotation.jsonl`), needed only when filtering by gene or renaming motifs to gene symbols.
+
+```{r}
+jaspar_file <- "H14CORE_jaspar_format.txt"
+annotation_file <- "H14CORE_annotation.jsonl"
+```
+
+The example chunks below are not evaluated, since they require these downloaded
+files.
+
+<br>
+
+## Filtering
+```{r, eval=F}
+# By gene symbol (case-insensitive; a motif is kept if any of its genes matches):
+motifs <- filter.hocomoco.jaspar(jaspar_file = jaspar_file,
+                                 genes = c("CTCF", "GATA1", "AR"),
+                                 annotation_file = annotation_file)
+```
+
+Motif IDs encode the model **subtype**, **experiment** type, and **quality** grade
+-- e.g. `CTCF.H14CORE.0.PSM.A` is subtype 0, evidence P+S+M, quality A. To keep only
+the primary, high-quality models, use the `subtypes` and `qualities` arguments; the
+familiar "0.A / 0.B" shorthand corresponds to `subtypes = 0, qualities = c("A", "B")`
+(in v14 the experiment letters sit between the subtype and quality fields).
+
+```{r, eval=F}
+best <- filter.hocomoco.jaspar(jaspar_file = jaspar_file,
+                               genes = c("CTCF", "GATA1", "AR"),
+                               subtypes = 0,
+                               qualities = c("A", "B"),
+                               annotation_file = annotation_file)
+```
+
+
+Or pick specific motifs by their exact IDs (no annotation needed unless you also
+rename to gene symbols):
+
+```{r, eval=F}
+picked <- filter.hocomoco.jaspar(jaspar_file = jaspar_file,
+                                 motif_ids = c("CTCF.H14CORE.0.PSM.A", "GATA1.H14CORE.0.PSM.A"))
+```
+
+<br>
+
+## Naming and export
+Choose whether the returned motifs are named by motif ID (the default) or by gene
+symbol; the motif ID is always retained in the `altname` slot. Supplying `out_file`
+writes the result with `universalmotif::write_jaspar()`:
+
+```{r, eval=F}
+filter.hocomoco.jaspar(jaspar_file = jaspar_file,
+                       genes = "CTCF",
+                       annotation_file = annotation_file,
+                       names_as = "gene",
+                       out_file = "ctcf_motifs.jaspar")
+```
+
+With no `out_file`, the filtered motifs are simply returned to the console for
+interactive use or downstream scanning (for example `universalmotif::scan_sequences()`,
+or conversion to a `PWMatrixList` for use with **motifmatchr**).
+
+<br>
+
+------------------------------------------------------
+
+# **Sample correlation heatmap** {#corrheatmap}
+snakeATAC computes pairwise sample correlations with deepTools `plotCorrelation` and writes the coefficient matrices alongside its own heatmaps.<br>
+`correlation.heatmap()` turns one of those matrices into a clustered heatmap (`ggplot2`) with a dendrogram, and can optionally return the underlying `hclust` and distance objects.
+
+<br>
+
+## Input
+A snakeATAC correlation matrix (`.txt`), Spearman or Pearson:
+
+```
+06_Overall_quality_and_info/Sample_comparisons/Sample_correlation/Correlation_matrix_on_BigWigs_wholeGenome_spearmanMethod.txt
+06_Overall_quality_and_info/Sample_comparisons/Sample_correlation/Correlation_matrix_on_BigWigs_wholeGenome_pearsonMethod.txt
+```
+
+A path (read with `data.table::fread`) or an in-memory `data.frame` are both accepted.
+
+<br>
+
+## Usage
+```{r, eval=F}
+corr <- file.path("06_Overall_quality_and_info", "Sample_comparisons",
+                  "Sample_correlation",
+                  "Correlation_matrix_on_BigWigs_wholeGenome_spearmanMethod.txt")
+
+correlation.heatmap(corr)
+```
+
+```{r, eval=F}
+# Tighten the colour range, move the dendrogram, use Ward clustering, hide labels:
+correlation.heatmap(correlation.matrix = corr,
+                    correlation.scale.limits = c(0.8, 1),
+                    dendrogram.position = "top",
+                    clustering.method = "ward.D2",
+                    display.values = FALSE)
+
+# Drop samples and also return the clustering objects:
+out <- correlation.heatmap(correlation.matrix = corr,
+                           excluded.samples = c("sampleX", "sampleY"),
+                           return.cluster.object = TRUE)
+out$heatmap
+out$cluster
+```
+
+The palette accepts any color vector (default: reversed viridis *mako*); set `exclude.diagonal = TRUE` to blank the self-correlations.
+
+<br>
+
+------------------------------------------------------------
+
+# **PCA plot** {#pcaplot}
+To compare samples, snakeATAC computes genome-wide coverage over fixed bins with deepTools `multiBigwigSummary` and already emits a PCA under `06_Overall_quality_and_info/`. `read.multibigwigsummary()` re-imports that matrix into R and `plot.PCA()` regenerates a fully customisable PCA as a `ggplot2` object.
+
+<br>
+
+## Input
+The `multiBigwigSummary` output (`.npz`), written by snakeATAC to:
+
+```
+06_Overall_quality_and_info/Sample_comparisons/Sample_correlation/multiBigWigSummary_matrix_allSamples.npz
+```
+
+(The same functions also work on the peak-score matrix
+`06_Overall_quality_and_info/Sample_comparisons/Peak_comparison/peaks_score_matrix_all_samples_<peakcaller>.npz`.)
+
+`read.multibigwigsummary()` reads the `.npz` through **reticulate**, so an R-visible Python with **numpy** installed is required.
+
+<br>
+
+## Usage
+```{r, eval=F}
+npz <- file.path("06_Overall_quality_and_info", "Sample_comparisons",
+                 "Sample_correlation", "multiBigWigSummary_matrix_allSamples.npz")
+
+mat <- read.multibigwigsummary(npz)   # columns = samples, rows = genomic bins
+dim(mat)
+colnames(mat)
+```
+
+```{r, eval=F}
+# Default PCA on PC1 / PC2:
+plot.PCA(mat)
+
+# Drop samples, look at PC2 vs PC3, and set custom (named) colours:
+plot.PCA(matrix = mat,
+         excluded.samples = "sampleX",
+         PCs = c(2, 3),
+         color.list = c(WT_rep1 = "#1b9e77", WT_rep2 = "#1b9e77",
+                        KO_rep1 = "#d95f02", KO_rep2 = "#d95f02"),
+         point.size = 4)
+```
+
+`scale` and `center` (both `TRUE` by default) are passed to `prcomp()`. The return value is a `ggplot2` object, so it can be themed further or saved with `ggsave()`.
+
+
+------------------------------------------------------
+
+# **Benchmark summary** {#benchmark}
+Snakemake writes one benchmark file per rule into a `benchmarks/` folder in the snakeATAC output directory.<br> `benchmark.summary()` aggregates them into a per-rule table of total runtime and peak resources, with a final `SUMMARY` row.
+
+```{r, eval=F}
+bench <- benchmark.summary("path/to/snakeATAC_output/benchmarks")
+bench
+```
+
+The returned `data.frame` has one row per pipeline rule -- number of steps, total running time (in minutes and as `dd.hh.mm.ss`), maximum physical and virtual memory (GB) and the average CPU load -- followed by a `SUMMARY` row totalling the run.
+
+
+
+<br>
+
+-----------------
+# **Package information** {#info}
+## Documentation
+With the package a detailed [web manual](https://github.com/sebastian-gregoricchio/snakeATAC/tree/main/utility/snakeATAC.utility/manual/index.html) with details for each function and respective parameters is available.
+
+The R-package has been published on [GitHub](https://github.com/sebastian-gregoricchio/snakeATAC/tree/main/utility/snakeATAC.utility). At these site it is possible to find the installation procedure, required dependencies, and the links for changeLog, manual and vignette.
+
+<br>
+
+## Package history and releases
+A list of all releases and respective description of changes applied could be found [here](https://github.com/sebastian-gregoricchio/snakeATAC/tree/main/utility/snakeATAC.utility/NEWS).
+
+
+<br>
+
+## Contact
+For any suggestion, bug fixing, commentary please contact fill an [Issues](https://github.com/sebastian-gregoricchio/snakeATAC/issues)/[Pull requests](https://github.com/sebastian-gregoricchio/snakeATAC/pulls) form on the `snakeATAC` github page.
+
+![](https://badges.pufler.dev/contributors/sebastian-gregoricchio/snakeATAC?size=50&padding=5&bots=true)
+
+
+## License
+This package is under a GNU General Public License (version 3).
+
+
+
+

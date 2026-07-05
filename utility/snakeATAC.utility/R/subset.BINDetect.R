@@ -67,11 +67,10 @@
 #'
 #' @examples
 #' \dontrun{
-#' res = subset_bindetect_by_bed(
-#'   bindetect_dir = "05b_Differential_TF_binding_TOBIAS/C_BINDetect_merged_BAMs/groupA.vs.groupB",
-#'   bed = "my_regions.bed",
-#'   condition1 = "groupA",
-#'   condition2 = "groupB")
+#' res = subset.BINDetect(bindetect_dir = "05b_Differential_TF_binding_TOBIAS/C_BINDetect_merged_BAMs/groupA.vs.groupB",
+#'                        bed = "my_regions.bed",
+#'                        condition1 = "groupA",
+#'                        condition2 = "groupB")
 #' head(res[res$top, ])
 #' }
 #'
@@ -83,7 +82,7 @@
 #' @export
 
 
-subset_BINDetect = function(bindetect_dir,
+subset.BINDetect = function(bindetect_dir,
                             bed,
                             condition1 = NULL,
                             condition2 = NULL,
