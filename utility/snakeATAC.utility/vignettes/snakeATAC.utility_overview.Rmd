@@ -375,14 +375,14 @@ The returned `data.frame` has one row per pipeline rule -- number of steps, tota
 -----------------
 # **Package information** {#info}
 ## Documentation
-With the package a detailed [web manual](https://github.com/sebastian-gregoricchio/snakeATAC/tree/main/utility/snakeATAC.utility/manual/index.html) with details for each function and respective parameters is available.
+With the package a detailed [web-manual](https://sebastian-gregoricchio.github.io/snakeATAC/utility/snakeATAC.utility/manual/index.html) with details for each function and respective parameters is available.
 
 The R-package has been published on [GitHub](https://github.com/sebastian-gregoricchio/snakeATAC/tree/main/utility/snakeATAC.utility). At these site it is possible to find the installation procedure, required dependencies, and the links for changeLog, manual and vignette.
 
 <br>
 
 ## Package history and releases
-A list of all releases and respective description of changes applied could be found [here](https://github.com/sebastian-gregoricchio/snakeATAC/tree/main/utility/snakeATAC.utility/NEWS).
+A list of all releases and respective description of changes applied could be found [here](https://sebastian-gregoricchio.github.io/snakeATAC/utility/snakeATAC.utility/NEWS).
 
 
 <br>
