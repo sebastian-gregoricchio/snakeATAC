@@ -58,6 +58,34 @@ citation("snakeATAC.utility")
 # top_TFs <- res_subset[res_subset$top, c("TF", "subset_change", "padj")]
 # top_TFs
 
+## ----eval=FALSE---------------------------------------------------------------
+# mgz <- file.path("05b_Differential_TF_binding_TOBIAS",
+#                  "D_density_profiles_merged_BAMs", "matrices",
+#                  "CTCF.H14CORE.0.PSM.A_single.base.scores_per.region.gz")
+# 
+# plot.footprint(matrix.gz = mgz,
+#                factor = "CTCF")
+# 
+# # Average only over a chosen region set (BED path, data.frame, or GRanges),
+# # and rescale profiles to 0-1:
+# plot.footprint(matrix.gz = mgz,
+#                factor = "CTCF",
+#                white.list = "enhancers.bed",
+#                normalize.zero.one = TRUE)
+
+## ----eval=FALSE---------------------------------------------------------------
+# res <- file.path("05b_Differential_TF_binding_TOBIAS",
+#                  "C_BINDetect_merged_BAMs", "groupA.vs.groupB",
+#                  "bindetect_results.txt")
+# 
+# plot.BINDetect.volcano(res)
+# 
+# # Force-label extra motifs and recolour the two sides:
+# plot.BINDetect.volcano(results = res,
+#                        extra.labels = "CTCF.H14CORE.0.PSM.A",
+#                        right.color = "firebrick",
+#                        left.color = "navy")
+
 ## -----------------------------------------------------------------------------
 jaspar_file <- "H14CORE_jaspar_format.txt"
 annotation_file <- "H14CORE_annotation.jsonl"

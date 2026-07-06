@@ -182,15 +182,22 @@ Netherlands<br><a class="author_email" href="mailto:#"><a href="mailto:s.gregori
 <ul>
 <li><a href="#citation" id="toc-citation"><span class="toc-section-number">1.1</span> Citation</a></li>
 </ul></li>
-<li><a href="#filterbindetect" id="toc-filterbindetect"><span class="toc-section-number">2</span> <strong>Filter
-<code>BINDetect</code> results</strong></a>
+<li><a href="#bindetect" id="toc-bindetect"><span class="toc-section-number">2</span> <strong><code>BINDetect</code>
+results</strong></a>
 <ul>
-<li><a href="#inputs-from-a-snakeatac-run" id="toc-inputs-from-a-snakeatac-run"><span class="toc-section-number">2.1</span> Inputs from a
+<li><a href="#filter-bindetect-results" id="toc-filter-bindetect-results"><span class="toc-section-number">2.1</span> Filter <code>BINDetect</code>
+results</a>
+<ul>
+<li><a href="#inputs-from-a-snakeatac-run" id="toc-inputs-from-a-snakeatac-run"><span class="toc-section-number">2.1.1</span> Inputs from a
 <code>snakeATAC</code> run</a></li>
-<li><a href="#choosing-the-background" id="toc-choosing-the-background"><span class="toc-section-number">2.2</span> Choosing the background</a></li>
-<li><a href="#the-bound_in_any-filter" id="toc-the-bound_in_any-filter"><span class="toc-section-number">2.3</span> The <code>bound_in_any</code>
+<li><a href="#choosing-the-background" id="toc-choosing-the-background"><span class="toc-section-number">2.1.2</span> Choosing the background</a></li>
+<li><a href="#the-bound_in_any-filter" id="toc-the-bound_in_any-filter"><span class="toc-section-number">2.1.3</span> The <code>bound_in_any</code>
 filter</a></li>
-<li><a href="#selecting-top-tfs" id="toc-selecting-top-tfs"><span class="toc-section-number">2.4</span> Selecting top TFs</a></li>
+<li><a href="#selecting-top-tfs" id="toc-selecting-top-tfs"><span class="toc-section-number">2.1.4</span> Selecting top TFs</a></li>
+</ul></li>
+<li><a href="#footprint-profiles" id="toc-footprint-profiles"><span class="toc-section-number">2.2</span> Footprint profiles</a></li>
+<li><a href="#differential-binding-volcano" id="toc-differential-binding-volcano"><span class="toc-section-number">2.3</span> Differential-binding
+volcano</a></li>
 </ul></li>
 <li><a href="#filterhoco" id="toc-filterhoco"><span class="toc-section-number">3</span> <strong>Filter HOCOMOCO
 motifs</strong></a>
@@ -288,9 +295,9 @@ can be inspected and figures customized directly in R.</p>
 <hr />
 </div>
 </div>
-<div id="filterbindetect" class="section level1" number="2">
-<h1><span class="header-section-number">2</span> <strong>Filter
-<code>BINDetect</code> results</strong></h1>
+<div id="bindetect" class="section level1" number="2">
+<h1><span class="header-section-number">2</span>
+<strong><code>BINDetect</code> results</strong></h1>
 <p>The <code>snakeATAC</code> differential TF-binding step runs
 <code>TOBIAS BINDetect</code> on a pair of group-level footprint tracks
 and writes, per comparison, a <code>bindetect_results.txt</code> table
@@ -298,6 +305,10 @@ plus one sub-folder per transcription factor (TF).<br> A common
 follow-up question is: <em>within a specific set of regions</em> (a
 promoter set, a set of differential peaks, a ChIP-seq target list, …),
 which TFs are differentially bound between the two conditions?</p>
+<p><br></p>
+<div id="filter-bindetect-results" class="section level2" number="2.1">
+<h2><span class="header-section-number">2.1</span> Filter
+<code>BINDetect</code> results</h2>
 <p>The function <code>subset_BINDetect</code> from
 <code>snakeATAC.utility</code>: - Overlaps the existing per-site output
 with your BED and re-summarises - Normalization kept genome-wide (as
@@ -314,9 +325,9 @@ distribution and de-centres the volcano. The function avoids this by
 keeping the background genome-wide.</p>
 </blockquote>
 <p><br></p>
-<div id="inputs-from-a-snakeatac-run" class="section level2" number="2.1">
-<h2><span class="header-section-number">2.1</span> Inputs from a
-<code>snakeATAC</code> run</h2>
+<div id="inputs-from-a-snakeatac-run" class="section level3" number="2.1.1">
+<h3><span class="header-section-number">2.1.1</span> Inputs from a
+<code>snakeATAC</code> run</h3>
 <p>The function starts from the differential TF-binding outputs produced
 by the <code>snakeATAC</code>(/<code>TOBIAS</code>) pipeline (folder
 <code>05b_Differential_TF_binding_TOBIAS</code>).</p>
@@ -350,9 +361,9 @@ you need numbers directly comparable to a real run, re run TOBIAS
 manually using your subset-regions as <code>--peaks</code>.</p>
 <p><br></p>
 </div>
-<div id="choosing-the-background" class="section level2" number="2.2">
-<h2><span class="header-section-number">2.2</span> Choosing the
-background</h2>
+<div id="choosing-the-background" class="section level3" number="2.1.2">
+<h3><span class="header-section-number">2.1.2</span> Choosing the
+background</h3>
 <p>The <code>background</code> argument decides <em>which question you
 answer</em>:</p>
 <ul>
@@ -373,9 +384,9 @@ regions</strong> relative to the rest of the genome?</li>
 <span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">background =</span> <span class="st">&quot;outside&quot;</span>)</span></code></pre></div>
 <p><br></p>
 </div>
-<div id="the-bound_in_any-filter" class="section level2" number="2.3">
-<h2><span class="header-section-number">2.3</span> The
-<code>bound_in_any</code> filter</h2>
+<div id="the-bound_in_any-filter" class="section level3" number="2.1.3">
+<h3><span class="header-section-number">2.1.3</span> The
+<code>bound_in_any</code> filter</h3>
 <p>Setting <code>bound_in_any = TRUE</code> keeps only sites predicted
 bound in at least one condition before summarising. This is a reasonable
 way to drop empty sites, but note it <strong>biases the log2fc
@@ -391,9 +402,9 @@ doubt.</p>
 <span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>                   <span class="at">bound_in_any =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
 <p><br></p>
 </div>
-<div id="selecting-top-tfs" class="section level2" number="2.4">
-<h2><span class="header-section-number">2.4</span> Selecting top
-TFs</h2>
+<div id="selecting-top-tfs" class="section level3" number="2.1.4">
+<h3><span class="header-section-number">2.1.4</span> Selecting top
+TFs</h3>
 <p>The <code>top</code> column mirrors the BINDetect volcano highlight:
 a TF is flagged when its <code>subset_change</code> falls in the
 lower/upper <code>top_quantile</code> tails and/or its
@@ -404,6 +415,53 @@ hundred motifs, “top 5%” is only a handful of TFs. To rank
 column in the <code>*_overview.txt</code> files directly.</p>
 <div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>top_TFs <span class="ot">&lt;-</span> res_subset[res_subset<span class="sc">$</span>top, <span class="fu">c</span>(<span class="st">&quot;TF&quot;</span>, <span class="st">&quot;subset_change&quot;</span>, <span class="st">&quot;padj&quot;</span>)]</span>
 <span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a>top_TFs</span></code></pre></div>
+<p><br></p>
+</div>
+</div>
+<div id="footprint-profiles" class="section level2" number="2.2">
+<h2><span class="header-section-number">2.2</span> Footprint
+profiles</h2>
+<p>Input: the per-motif score matrix (a deepTools matrix) at</p>
+<pre><code>05b_Differential_TF_binding_TOBIAS/D_density_profiles_merged_BAMs/matrices/&lt;MOTIF.ID&gt;_single.base.scores_per.region.gz</code></pre>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>mgz <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">&quot;05b_Differential_TF_binding_TOBIAS&quot;</span>,</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>                 <span class="st">&quot;D_density_profiles_merged_BAMs&quot;</span>, <span class="st">&quot;matrices&quot;</span>,</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>                 <span class="st">&quot;CTCF.H14CORE.0.PSM.A_single.base.scores_per.region.gz&quot;</span>)</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a><span class="fu">plot.footprint</span>(<span class="at">matrix.gz =</span> mgz,</span>
+<span id="cb7-6"><a href="#cb7-6" tabindex="-1"></a>               <span class="at">factor =</span> <span class="st">&quot;CTCF&quot;</span>)</span>
+<span id="cb7-7"><a href="#cb7-7" tabindex="-1"></a></span>
+<span id="cb7-8"><a href="#cb7-8" tabindex="-1"></a><span class="co"># Average only over a chosen region set (BED path, data.frame, or GRanges),</span></span>
+<span id="cb7-9"><a href="#cb7-9" tabindex="-1"></a><span class="co"># and rescale profiles to 0-1:</span></span>
+<span id="cb7-10"><a href="#cb7-10" tabindex="-1"></a><span class="fu">plot.footprint</span>(<span class="at">matrix.gz =</span> mgz,</span>
+<span id="cb7-11"><a href="#cb7-11" tabindex="-1"></a>               <span class="at">factor =</span> <span class="st">&quot;CTCF&quot;</span>,</span>
+<span id="cb7-12"><a href="#cb7-12" tabindex="-1"></a>               <span class="at">white.list =</span> <span class="st">&quot;enhancers.bed&quot;</span>,</span>
+<span id="cb7-13"><a href="#cb7-13" tabindex="-1"></a>               <span class="at">normalize.zero.one =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<p><br></p>
+</div>
+<div id="differential-binding-volcano" class="section level2" number="2.3">
+<h2><span class="header-section-number">2.3</span> Differential-binding
+volcano</h2>
+<p>Input: the <code>bindetect_results.txt</code> of one condition
+comparison:</p>
+<pre><code>05b_Differential_TF_binding_TOBIAS/C_BINDetect_merged_BAMs/&lt;condA&gt;.vs.&lt;condB&gt;/bindetect_results.txt</code></pre>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>res <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">&quot;05b_Differential_TF_binding_TOBIAS&quot;</span>,</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>                 <span class="st">&quot;C_BINDetect_merged_BAMs&quot;</span>, <span class="st">&quot;groupA.vs.groupB&quot;</span>,</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>                 <span class="st">&quot;bindetect_results.txt&quot;</span>)</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a><span class="fu">plot.BINDetect.volcano</span>(res)</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a></span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co"># Force-label extra motifs and recolour the two sides:</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="fu">plot.BINDetect.volcano</span>(<span class="at">results =</span> res,</span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a>                       <span class="at">extra.labels =</span> <span class="st">&quot;CTCF.H14CORE.0.PSM.A&quot;</span>,</span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a>                       <span class="at">right.color =</span> <span class="st">&quot;firebrick&quot;</span>,</span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a>                       <span class="at">left.color =</span> <span class="st">&quot;navy&quot;</span>)</span></code></pre></div>
+<blockquote>
+<p><code>motif.pattern</code> trims a suffix off each motif ID for the
+labels; its default targets HOCOMOCO <strong>v11</strong> names
+(<code>_HUMAN.H11MO...</code>). For <strong>v14</strong> IDs such as
+<code>CTCF.H14CORE.0.PSM.A</code>, pass a matching pattern to label by
+the TF alone, e.g. <code>motif.pattern = &quot;[.]H[0-9]+CORE.*$&quot;</code>.</p>
+</blockquote>
 <p><br></p>
 <hr />
 </div>
@@ -437,18 +495,18 @@ filter;</li>
 (e.g. <code>H14CORE_annotation.jsonl</code>), needed only when filtering
 by gene or renaming motifs to gene symbols.</li>
 </ul>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>jaspar_file <span class="ot">&lt;-</span> <span class="st">&quot;H14CORE_jaspar_format.txt&quot;</span></span>
-<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a>annotation_file <span class="ot">&lt;-</span> <span class="st">&quot;H14CORE_annotation.jsonl&quot;</span></span></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>jaspar_file <span class="ot">&lt;-</span> <span class="st">&quot;H14CORE_jaspar_format.txt&quot;</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>annotation_file <span class="ot">&lt;-</span> <span class="st">&quot;H14CORE_annotation.jsonl&quot;</span></span></code></pre></div>
 <p>The example chunks below are not evaluated, since they require these
 downloaded files.</p>
 <p><br></p>
 </div>
 <div id="filtering" class="section level2" number="3.2">
 <h2><span class="header-section-number">3.2</span> Filtering</h2>
-<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co"># By gene symbol (case-insensitive; a motif is kept if any of its genes matches):</span></span>
-<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>motifs <span class="ot">&lt;-</span> <span class="fu">filter.hocomoco.jaspar</span>(<span class="at">jaspar_file =</span> jaspar_file,</span>
-<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>                                 <span class="at">genes =</span> <span class="fu">c</span>(<span class="st">&quot;CTCF&quot;</span>, <span class="st">&quot;GATA1&quot;</span>, <span class="st">&quot;AR&quot;</span>),</span>
-<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>                                 <span class="at">annotation_file =</span> annotation_file)</span></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co"># By gene symbol (case-insensitive; a motif is kept if any of its genes matches):</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>motifs <span class="ot">&lt;-</span> <span class="fu">filter.hocomoco.jaspar</span>(<span class="at">jaspar_file =</span> jaspar_file,</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>                                 <span class="at">genes =</span> <span class="fu">c</span>(<span class="st">&quot;CTCF&quot;</span>, <span class="st">&quot;GATA1&quot;</span>, <span class="st">&quot;AR&quot;</span>),</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>                                 <span class="at">annotation_file =</span> annotation_file)</span></code></pre></div>
 <p>Motif IDs encode the model <strong>subtype</strong>,
 <strong>experiment</strong> type, and <strong>quality</strong> grade –
 e.g. <code>CTCF.H14CORE.0.PSM.A</code> is subtype 0, evidence P+S+M,
@@ -457,15 +515,15 @@ quality A. To keep only the primary, high-quality models, use the
 “0.A / 0.B” shorthand corresponds to
 <code>subtypes = 0, qualities = c(&quot;A&quot;, &quot;B&quot;)</code> (in v14 the
 experiment letters sit between the subtype and quality fields).</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>best <span class="ot">&lt;-</span> <span class="fu">filter.hocomoco.jaspar</span>(<span class="at">jaspar_file =</span> jaspar_file,</span>
-<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>                               <span class="at">genes =</span> <span class="fu">c</span>(<span class="st">&quot;CTCF&quot;</span>, <span class="st">&quot;GATA1&quot;</span>, <span class="st">&quot;AR&quot;</span>),</span>
-<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>                               <span class="at">subtypes =</span> <span class="dv">0</span>,</span>
-<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>                               <span class="at">qualities =</span> <span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>),</span>
-<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>                               <span class="at">annotation_file =</span> annotation_file)</span></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>best <span class="ot">&lt;-</span> <span class="fu">filter.hocomoco.jaspar</span>(<span class="at">jaspar_file =</span> jaspar_file,</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>                               <span class="at">genes =</span> <span class="fu">c</span>(<span class="st">&quot;CTCF&quot;</span>, <span class="st">&quot;GATA1&quot;</span>, <span class="st">&quot;AR&quot;</span>),</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>                               <span class="at">subtypes =</span> <span class="dv">0</span>,</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>                               <span class="at">qualities =</span> <span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>),</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>                               <span class="at">annotation_file =</span> annotation_file)</span></code></pre></div>
 <p>Or pick specific motifs by their exact IDs (no annotation needed
 unless you also rename to gene symbols):</p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>picked <span class="ot">&lt;-</span> <span class="fu">filter.hocomoco.jaspar</span>(<span class="at">jaspar_file =</span> jaspar_file,</span>
-<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>                                 <span class="at">motif_ids =</span> <span class="fu">c</span>(<span class="st">&quot;CTCF.H14CORE.0.PSM.A&quot;</span>, <span class="st">&quot;GATA1.H14CORE.0.PSM.A&quot;</span>))</span></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>picked <span class="ot">&lt;-</span> <span class="fu">filter.hocomoco.jaspar</span>(<span class="at">jaspar_file =</span> jaspar_file,</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>                                 <span class="at">motif_ids =</span> <span class="fu">c</span>(<span class="st">&quot;CTCF.H14CORE.0.PSM.A&quot;</span>, <span class="st">&quot;GATA1.H14CORE.0.PSM.A&quot;</span>))</span></code></pre></div>
 <p><br></p>
 </div>
 <div id="naming-and-export" class="section level2" number="3.3">
@@ -475,11 +533,11 @@ export</h2>
 default) or by gene symbol; the motif ID is always retained in the
 <code>altname</code> slot. Supplying <code>out_file</code> writes the
 result with <code>universalmotif::write_jaspar()</code>:</p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="fu">filter.hocomoco.jaspar</span>(<span class="at">jaspar_file =</span> jaspar_file,</span>
-<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>                       <span class="at">genes =</span> <span class="st">&quot;CTCF&quot;</span>,</span>
-<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>                       <span class="at">annotation_file =</span> annotation_file,</span>
-<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>                       <span class="at">names_as =</span> <span class="st">&quot;gene&quot;</span>,</span>
-<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>                       <span class="at">out_file =</span> <span class="st">&quot;ctcf_motifs.jaspar&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="fu">filter.hocomoco.jaspar</span>(<span class="at">jaspar_file =</span> jaspar_file,</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>                       <span class="at">genes =</span> <span class="st">&quot;CTCF&quot;</span>,</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>                       <span class="at">annotation_file =</span> annotation_file,</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>                       <span class="at">names_as =</span> <span class="st">&quot;gene&quot;</span>,</span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>                       <span class="at">out_file =</span> <span class="st">&quot;ctcf_motifs.jaspar&quot;</span>)</span></code></pre></div>
 <p>With no <code>out_file</code>, the filtered motifs are simply
 returned to the console for interactive use or downstream scanning (for
 example <code>universalmotif::scan_sequences()</code>, or conversion to
@@ -511,24 +569,24 @@ Pearson:</p>
 </div>
 <div id="usage" class="section level2" number="4.2">
 <h2><span class="header-section-number">4.2</span> Usage</h2>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>corr <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">&quot;06_Overall_quality_and_info&quot;</span>, <span class="st">&quot;Sample_comparisons&quot;</span>,</span>
-<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>                  <span class="st">&quot;Sample_correlation&quot;</span>,</span>
-<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>                  <span class="st">&quot;Correlation_matrix_on_BigWigs_wholeGenome_spearmanMethod.txt&quot;</span>)</span>
-<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a></span>
-<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a><span class="fu">correlation.heatmap</span>(corr)</span></code></pre></div>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co"># Tighten the colour range, move the dendrogram, use Ward clustering, hide labels:</span></span>
-<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="fu">correlation.heatmap</span>(<span class="at">correlation.matrix =</span> corr,</span>
-<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>                    <span class="at">correlation.scale.limits =</span> <span class="fu">c</span>(<span class="fl">0.8</span>, <span class="dv">1</span>),</span>
-<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>                    <span class="at">dendrogram.position =</span> <span class="st">&quot;top&quot;</span>,</span>
-<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>                    <span class="at">clustering.method =</span> <span class="st">&quot;ward.D2&quot;</span>,</span>
-<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>                    <span class="at">display.values =</span> <span class="cn">FALSE</span>)</span>
-<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a></span>
-<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a><span class="co"># Drop samples and also return the clustering objects:</span></span>
-<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">correlation.heatmap</span>(<span class="at">correlation.matrix =</span> corr,</span>
-<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a>                           <span class="at">excluded.samples =</span> <span class="fu">c</span>(<span class="st">&quot;sampleX&quot;</span>, <span class="st">&quot;sampleY&quot;</span>),</span>
-<span id="cb13-11"><a href="#cb13-11" tabindex="-1"></a>                           <span class="at">return.cluster.object =</span> <span class="cn">TRUE</span>)</span>
-<span id="cb13-12"><a href="#cb13-12" tabindex="-1"></a>out<span class="sc">$</span>heatmap</span>
-<span id="cb13-13"><a href="#cb13-13" tabindex="-1"></a>out<span class="sc">$</span>cluster</span></code></pre></div>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a>corr <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">&quot;06_Overall_quality_and_info&quot;</span>, <span class="st">&quot;Sample_comparisons&quot;</span>,</span>
+<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a>                  <span class="st">&quot;Sample_correlation&quot;</span>,</span>
+<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a>                  <span class="st">&quot;Correlation_matrix_on_BigWigs_wholeGenome_spearmanMethod.txt&quot;</span>)</span>
+<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a></span>
+<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a><span class="fu">correlation.heatmap</span>(corr)</span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="co"># Tighten the colour range, move the dendrogram, use Ward clustering, hide labels:</span></span>
+<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a><span class="fu">correlation.heatmap</span>(<span class="at">correlation.matrix =</span> corr,</span>
+<span id="cb17-3"><a href="#cb17-3" tabindex="-1"></a>                    <span class="at">correlation.scale.limits =</span> <span class="fu">c</span>(<span class="fl">0.8</span>, <span class="dv">1</span>),</span>
+<span id="cb17-4"><a href="#cb17-4" tabindex="-1"></a>                    <span class="at">dendrogram.position =</span> <span class="st">&quot;top&quot;</span>,</span>
+<span id="cb17-5"><a href="#cb17-5" tabindex="-1"></a>                    <span class="at">clustering.method =</span> <span class="st">&quot;ward.D2&quot;</span>,</span>
+<span id="cb17-6"><a href="#cb17-6" tabindex="-1"></a>                    <span class="at">display.values =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb17-7"><a href="#cb17-7" tabindex="-1"></a></span>
+<span id="cb17-8"><a href="#cb17-8" tabindex="-1"></a><span class="co"># Drop samples and also return the clustering objects:</span></span>
+<span id="cb17-9"><a href="#cb17-9" tabindex="-1"></a>out <span class="ot">&lt;-</span> <span class="fu">correlation.heatmap</span>(<span class="at">correlation.matrix =</span> corr,</span>
+<span id="cb17-10"><a href="#cb17-10" tabindex="-1"></a>                           <span class="at">excluded.samples =</span> <span class="fu">c</span>(<span class="st">&quot;sampleX&quot;</span>, <span class="st">&quot;sampleY&quot;</span>),</span>
+<span id="cb17-11"><a href="#cb17-11" tabindex="-1"></a>                           <span class="at">return.cluster.object =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb17-12"><a href="#cb17-12" tabindex="-1"></a>out<span class="sc">$</span>heatmap</span>
+<span id="cb17-13"><a href="#cb17-13" tabindex="-1"></a>out<span class="sc">$</span>cluster</span></code></pre></div>
 <p>The palette accepts any color vector (default: reversed viridis
 <em>mako</em>); set <code>exclude.diagonal = TRUE</code> to blank the
 self-correlations.</p>
@@ -560,22 +618,22 @@ through <strong>reticulate</strong>, so an R-visible Python with
 </div>
 <div id="usage-1" class="section level2" number="5.2">
 <h2><span class="header-section-number">5.2</span> Usage</h2>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>npz <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">&quot;06_Overall_quality_and_info&quot;</span>, <span class="st">&quot;Sample_comparisons&quot;</span>,</span>
-<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>                 <span class="st">&quot;Sample_correlation&quot;</span>, <span class="st">&quot;multiBigWigSummary_matrix_allSamples.npz&quot;</span>)</span>
-<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a></span>
-<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a>mat <span class="ot">&lt;-</span> <span class="fu">read.multibigwigsummary</span>(npz)   <span class="co"># columns = samples, rows = genomic bins</span></span>
-<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a><span class="fu">dim</span>(mat)</span>
-<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a><span class="fu">colnames</span>(mat)</span></code></pre></div>
-<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="co"># Default PCA on PC1 / PC2:</span></span>
-<span id="cb16-2"><a href="#cb16-2" tabindex="-1"></a><span class="fu">plot.PCA</span>(mat)</span>
-<span id="cb16-3"><a href="#cb16-3" tabindex="-1"></a></span>
-<span id="cb16-4"><a href="#cb16-4" tabindex="-1"></a><span class="co"># Drop samples, look at PC2 vs PC3, and set custom (named) colours:</span></span>
-<span id="cb16-5"><a href="#cb16-5" tabindex="-1"></a><span class="fu">plot.PCA</span>(<span class="at">matrix =</span> mat,</span>
-<span id="cb16-6"><a href="#cb16-6" tabindex="-1"></a>         <span class="at">excluded.samples =</span> <span class="st">&quot;sampleX&quot;</span>,</span>
-<span id="cb16-7"><a href="#cb16-7" tabindex="-1"></a>         <span class="at">PCs =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">3</span>),</span>
-<span id="cb16-8"><a href="#cb16-8" tabindex="-1"></a>         <span class="at">color.list =</span> <span class="fu">c</span>(<span class="at">WT_rep1 =</span> <span class="st">&quot;#1b9e77&quot;</span>, <span class="at">WT_rep2 =</span> <span class="st">&quot;#1b9e77&quot;</span>,</span>
-<span id="cb16-9"><a href="#cb16-9" tabindex="-1"></a>                        <span class="at">KO_rep1 =</span> <span class="st">&quot;#d95f02&quot;</span>, <span class="at">KO_rep2 =</span> <span class="st">&quot;#d95f02&quot;</span>),</span>
-<span id="cb16-10"><a href="#cb16-10" tabindex="-1"></a>         <span class="at">point.size =</span> <span class="dv">4</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a>npz <span class="ot">&lt;-</span> <span class="fu">file.path</span>(<span class="st">&quot;06_Overall_quality_and_info&quot;</span>, <span class="st">&quot;Sample_comparisons&quot;</span>,</span>
+<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a>                 <span class="st">&quot;Sample_correlation&quot;</span>, <span class="st">&quot;multiBigWigSummary_matrix_allSamples.npz&quot;</span>)</span>
+<span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a></span>
+<span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a>mat <span class="ot">&lt;-</span> <span class="fu">read.multibigwigsummary</span>(npz)   <span class="co"># columns = samples, rows = genomic bins</span></span>
+<span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a><span class="fu">dim</span>(mat)</span>
+<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a><span class="fu">colnames</span>(mat)</span></code></pre></div>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a><span class="co"># Default PCA on PC1 / PC2:</span></span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a><span class="fu">plot.PCA</span>(mat)</span>
+<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a></span>
+<span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a><span class="co"># Drop samples, look at PC2 vs PC3, and set custom (named) colours:</span></span>
+<span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a><span class="fu">plot.PCA</span>(<span class="at">matrix =</span> mat,</span>
+<span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a>         <span class="at">excluded.samples =</span> <span class="st">&quot;sampleX&quot;</span>,</span>
+<span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a>         <span class="at">PCs =</span> <span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">3</span>),</span>
+<span id="cb20-8"><a href="#cb20-8" tabindex="-1"></a>         <span class="at">color.list =</span> <span class="fu">c</span>(<span class="at">WT_rep1 =</span> <span class="st">&quot;#1b9e77&quot;</span>, <span class="at">WT_rep2 =</span> <span class="st">&quot;#1b9e77&quot;</span>,</span>
+<span id="cb20-9"><a href="#cb20-9" tabindex="-1"></a>                        <span class="at">KO_rep1 =</span> <span class="st">&quot;#d95f02&quot;</span>, <span class="at">KO_rep2 =</span> <span class="st">&quot;#d95f02&quot;</span>),</span>
+<span id="cb20-10"><a href="#cb20-10" tabindex="-1"></a>         <span class="at">point.size =</span> <span class="dv">4</span>)</span></code></pre></div>
 <p><code>scale</code> and <code>center</code> (both <code>TRUE</code> by
 default) are passed to <code>prcomp()</code>. The return value is a
 <code>ggplot2</code> object, so it can be themed further or saved with
@@ -591,8 +649,8 @@ summary</strong></h1>
 <code>benchmark.summary()</code> aggregates them into a per-rule table
 of total runtime and peak resources, with a final <code>SUMMARY</code>
 row.</p>
-<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a>bench <span class="ot">&lt;-</span> <span class="fu">benchmark.summary</span>(<span class="st">&quot;path/to/snakeATAC_output/benchmarks&quot;</span>)</span>
-<span id="cb17-2"><a href="#cb17-2" tabindex="-1"></a>bench</span></code></pre></div>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" tabindex="-1"></a>bench <span class="ot">&lt;-</span> <span class="fu">benchmark.summary</span>(<span class="st">&quot;path/to/snakeATAC_output/benchmarks&quot;</span>)</span>
+<span id="cb21-2"><a href="#cb21-2" tabindex="-1"></a>bench</span></code></pre></div>
 <p>The returned <code>data.frame</code> has one row per pipeline rule –
 number of steps, total running time (in minutes and as
 <code>dd.hh.mm.ss</code>), maximum physical and virtual memory (GB) and
