@@ -36,7 +36,7 @@ The vignette can be inspected on R as well by typing `browseVignettes("snakeATAC
 <br />
 
 ## Package history and releases
-A list of all releases and respective description of changes applied could be found [here](https://sebastian-gregoricchio.github.io/snakeATAC/utility/snakeATAC.utility/NEWS.md).
+A list of all releases and respective description of changes applied could be found [here](https://sebastian-gregoricchio.github.io/snakeATAC/utility/snakeATAC.utility/NEWS).
 
 <br />
 
