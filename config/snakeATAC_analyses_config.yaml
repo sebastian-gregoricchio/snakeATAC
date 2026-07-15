@@ -34,7 +34,7 @@ peak_calling:
   call_summits: True
   FRiP_threshold: 20 #%
   peak_score_heatmap:
-    plot_heatmap: True
+    plot_heatmap: False
     raw_heatmap_color: "Blues"
     zScore_heatmap_color: "seismic"
 
