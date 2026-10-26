@@ -1768,7 +1768,7 @@ rule diffTFbinding_BINDetect:
         """
         printf '\033[1;36mBINDetect for {wildcards.comparison}...\\n\033[0m'
 
-        CHR=$(grep -i chr {input.genome_fai} | wc -l)
+        CHR=$(grep -ci chr {input.genome_fai} || true)
         if [[ $CHR -gt 0 ]]; then PEAKS={input.peaks}; else PEAKS={input.peaks_woChr}; fi
 
         $CONDA_PREFIX/bin/TOBIAS BINDetect \
