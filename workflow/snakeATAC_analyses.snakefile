@@ -184,6 +184,12 @@ else:
     peakBased_size_factors = []
     peakBased_normalized_bw = []
 
+# Group-averaged peak-based normalized bigWigs (only when groups are defined, i.e. differential analyses requested)
+if (len(peakBased_normalized_bw) > 0 and len(norm_bw_average) > 0):
+    norm_bw_average_peakBased = expand(''.join(["03_Normalization/peakBased_normalized_merged/{group}_mapq", MAPQ, "_woMT_", DUP, "_shifted_peakBased.normalized_merged.bs", str(config["differential_TF_binding"]["merged_bigwig_binSize"]), ".bw"]), group = GROUPNAMES)
+else:
+    norm_bw_average_peakBased = []
+
 
 # CNA signal corrections
 if (eval(str(config["copy_number_variation"]["call_CNV"]))):
@@ -240,6 +246,7 @@ rule AAA_initialization:
         all_groups_density_profiles = all_groups_density_profiles,
         density_profiles_perComparison = density_profiles_perComparison,
         norm_bw_average = norm_bw_average,
+        norm_bw_average_peakBased = norm_bw_average_peakBased,
         snp = snp,
         indels = indels
 
@@ -609,6 +616,36 @@ rule peakBased_normalized_bigWigs:
         -p {threads} \
         -of bigwig \
         -o {output.peakBased_bw} &> {log.out}
+        """
+
+
+# Average peak-based normalized bigWigs by group
+rule compute_bigwigAverage_peakBased:
+    input:
+        norm_bw = lambda w: expand(''.join([PEAKNORMDIR, "{sample}_mapq", MAPQ, "_woMT_", DUP, "_shifted_peakBased.normalized_bs", PEAK_NORM_BINSIZE, ".bw"]), sample = GROUP_SAMPLES[w.GROUPS])
+    output:
+        norm_bw_average = ''.join(["03_Normalization/peakBased_normalized_merged/{GROUPS}_mapq", MAPQ, "_woMT_", DUP, "_shifted_peakBased.normalized_merged.bs", str(config["differential_TF_binding"]["merged_bigwig_binSize"]), ".bw"])
+    params:
+        binSize = str(config["differential_TF_binding"]["merged_bigwig_binSize"]),
+        blacklist = BLACKLIST
+    threads:
+        workflow.cores
+    log:
+        out = "03_Normalization/peakBased_normalized_merged/log/{GROUPS}_bigwigAverage.log"
+    benchmark:
+        "benchmarks/compute_bigwigAverage_peakBased/compute_bigwigAverage_peakBased---{GROUPS}_benchmark.txt"
+    priority: 50
+    shell:
+        """
+        printf '\033[1;36mMerging peak-based normalized bigwigs for group {wildcards.GROUPS}...\\n\033[0m'
+
+        $CONDA_PREFIX/bin/bigwigAverage \
+        -b {input.norm_bw} \
+        --binSize {params.binSize} \
+        --outFileName {output.norm_bw_average} \
+        --outFileFormat bigwig \
+        --blackListFileName {params.blacklist} \
+        -p {threads} &> {log.out}
         """
 # ----------------------------------------------------------------------------------------
 
