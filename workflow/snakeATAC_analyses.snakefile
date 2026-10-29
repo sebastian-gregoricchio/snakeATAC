@@ -24,6 +24,10 @@ def constraint_to(values: List[str]) -> str:
 
     return "({})".format("|".join(values))
 
+# Function to read True/False config values safely
+def str_to_bool(value) -> bool:
+    return str(value).strip().lower() in ("true", "t", "yes", "y", "1")
+
 # working diirectory
 home_dir = os.path.join(config["workflow_configuration"]["output_directory"],"")
 shell('mkdir -p {home_dir}')
@@ -162,6 +166,25 @@ else:
     hetamap_peaks = []
 
 
+# Chromosomes excluded when computing normalization factors (RPM and peak-based)
+# .split() (not .split(" ")) avoids empty patterns from double spaces; '^$' never matches a chromosome name
+IGNORE_CHR = '|'.join([re.sub('\\..*$', '', i) for i in str(config["genomic_annotations"]["ignore_for_normalization"]).split()]) or '^$'
+
+
+# Peak-based normalization (median-of-ratios size factors computed on the consensus peaks)
+# Default ON, also for config files without this section
+PEAKNORMDIR = "03_Normalization/peakBased_normalized/"
+peak_norm_config = config["peak_calling"].get("peak_based_normalization", {}) or {}
+PEAK_NORM_BINSIZE = str(peak_norm_config.get("bigWig_binSize", 10))
+
+if (str_to_bool(peak_norm_config.get("perform_peak_based_normalization", True)) and len(SAMPLENAMES) > 1):
+    peakBased_size_factors = os.path.join(PEAKNORMDIR, "peakBased_size_factors.tsv")
+    peakBased_normalized_bw = expand(''.join([PEAKNORMDIR, "{sample}_mapq", MAPQ, "_woMT_", DUP, "_shifted_peakBased.normalized_bs", PEAK_NORM_BINSIZE, ".bw"]), sample=SAMPLENAMES)
+else:
+    peakBased_size_factors = []
+    peakBased_normalized_bw = []
+
+
 # CNA signal corrections
 if (eval(str(config["copy_number_variation"]["call_CNV"]))):
     CNA_corrected_bw = expand(''.join(["03_Normalization/RPM_normalized_CNA.corrected/{sample}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized_CNA.corrected_bs", str(config["copy_number_variation"]["corrected_bigWig_binSize"]), ".bw"]), sample=SAMPLENAMES)
@@ -210,6 +233,8 @@ rule AAA_initialization:
         correlation_outputs_peaks = correlation_outputs_peaks,
         lorenz_plot_ggplot = os.path.join(SUMMARYDIR, "LorenzCurve_plotFingreprint/Lorenz_curve_deeptools.plotFingreprint_allSamples.pdf"),
         CNA_corrected_bw = CNA_corrected_bw,
+        peakBased_size_factors = peakBased_size_factors,
+        peakBased_normalized_bw = peakBased_normalized_bw,
         rawScores_hetamap_peaks = hetamap_peaks,
         bindetect_results_output = bindetect_results_output,
         all_groups_density_profiles = all_groups_density_profiles,
@@ -431,7 +456,7 @@ rule bam_shifting_and_RPM_normalization:
         mapq_cutoff = MAPQ,
         minFragmentLength = str(config["bam_features"]["minFragmentLength"]),
         maxFragmentLength = str(config["bam_features"]["maxFragmentLength"]),
-        ignore_chr = '|'.join([re.sub('\\..*$', '', i) for i in str(config["genomic_annotations"]["ignore_for_normalization"]).split(" ")])
+        ignore_chr = IGNORE_CHR
     threads:
         max(math.floor(workflow.cores/2), 1)
     log:
@@ -501,6 +526,89 @@ rule compute_bigwigAverage:
         --outFileFormat bigwig \
         --blackListFileName {params.blacklist} \
         -p {threads} &> {log.out}
+        """
+# ----------------------------------------------------------------------------------------
+
+
+
+# ----------------------------------------------------------------------------------------
+# Peak-based normalization: size factors on the consensus peaks (median-of-ratios, as in DESeq2)
+# Assumes that most peaks do not change between samples: removes differences in signal-to-noise (FRiP)
+rule peakBased_size_factors:
+    input:
+        score_matrix_peaks_table = os.path.join(SUMMARYDIR, ''.join(["Sample_comparisons/Peak_comparison/peaks_score_matrix_all_samples_table_", PEAKCALLER, ".tsv"]))
+    output:
+        size_factors = os.path.join(PEAKNORMDIR, "peakBased_size_factors.tsv")
+    params:
+        ignore_chr = IGNORE_CHR,
+        min_peaks = 500
+    threads: 1
+    benchmark:
+        "benchmarks/peakBased_size_factors/peakBased_size_factors---benchmark.txt"
+    run:
+        shell("printf '\033[1;36mComputing peak-based size factors (median-of-ratios on the consensus peaks)...\\n\033[0m'")
+
+        # multiBigwigSummary table: chr, start, end, one column per sample (mean RPM signal per peak)
+        scores = pd.read_csv(input.score_matrix_peaks_table, sep='\t')
+        scores.columns = [re.sub("^#|'", "", str(c)) for c in scores.columns]
+        chromosomes = scores.iloc[:,0].astype(str)
+        values = scores.iloc[:,3:]
+
+        # Same chromosomes excluded as for the RPM normalization (e.g. X, Y, MT)
+        values = values[~chromosomes.str.contains(params.ignore_chr, regex=True)]
+
+        # Only peaks with signal in all samples (as in DESeq2)
+        values = values[(values > 0).all(axis=1)]
+        n_peaks = values.shape[0]
+
+        if n_peaks >= params.min_peaks:
+            log_values = numpy.log(values)
+            log_ratios = log_values.sub(log_values.mean(axis=1), axis=0)   # log(signal / geometric mean of the peak)
+            size_factors = numpy.exp(log_ratios.median(axis=0))
+            size_factors = size_factors / numpy.exp(numpy.log(size_factors).mean())   # geometric mean = 1: keeps the RPM scale
+        else:
+            shell("printf '\033[1;33mWARNING: only {n_peaks} peaks have signal in all samples: peak-based size factors set to 1 (= RPM).\\n\033[0m'")
+            size_factors = pd.Series(1.0, index=values.columns)
+
+        pd.DataFrame({"sample": size_factors.index,
+                      "size_factor": size_factors.values,
+                      "scale_factor": 1 / size_factors.values,
+                      "peaks_used": n_peaks}).to_csv(output.size_factors, sep='\t', index=False)
+
+
+# Peak-based normalized bigWigs: RPM bigWig x scale factor (= RPM / size factor)
+rule peakBased_normalized_bigWigs:
+    input:
+        norm_bw = ''.join(["03_Normalization/RPM_normalized/{SAMPLES}_mapq", MAPQ, "_woMT_", DUP ,"_shifted_RPM.normalized.bw"]),
+        size_factors = os.path.join(PEAKNORMDIR, "peakBased_size_factors.tsv")
+    output:
+        peakBased_bw = ''.join([PEAKNORMDIR, "{SAMPLES}_mapq", MAPQ, "_woMT_", DUP, "_shifted_peakBased.normalized_bs", PEAK_NORM_BINSIZE, ".bw"])
+    params:
+        sample = "{SAMPLES}",
+        binSize = PEAK_NORM_BINSIZE
+    threads:
+        max(workflow.cores // 2, 1)
+    log:
+        out = os.path.join(PEAKNORMDIR, "log/{SAMPLES}_peakBased_normalization.log")
+    benchmark:
+        "benchmarks/peakBased_normalized_bigWigs/peakBased_normalized_bigWigs---{SAMPLES}_benchmark.txt"
+    priority: 40
+    shell:
+        """
+        printf '\033[1;36m{params.sample}: peak-based normalization of the RPM bigWig...\\n\033[0m'
+
+        SCALE=$(awk -F '\\t' -v s={params.sample} '$1==s {{print $3}}' {input.size_factors})
+        if [[ -z "$SCALE" ]]; then echo "No size factor found for {params.sample}" > {log.out}; exit 1; fi
+
+        $CONDA_PREFIX/bin/bigwigCompare \
+        --bigwig1 {input.norm_bw} \
+        --bigwig2 {input.norm_bw} \
+        --operation first \
+        --scaleFactors $SCALE:1 \
+        --binSize {params.binSize} \
+        -p {threads} \
+        -of bigwig \
+        -o {output.peakBased_bw} &> {log.out}
         """
 # ----------------------------------------------------------------------------------------
 
@@ -1228,7 +1336,8 @@ rule convert_CNA_to_bedGraph:
         bedGraph_filtered = temp(os.path.join(COPYWRITERDIR, ''.join(["{SAMPLES}/CNAprofiles/{SAMPLES}_filtered.abs.", str(config["copy_number_variation"]["CNA_threshold"]), "_linear_CNAcounts.bedGraph"])))
     params:
         sample = "{SAMPLES}",
-        CNA_threshold = int(config["copy_number_variation"]["CNA_threshold"])
+        CNA_threshold = float(config["copy_number_variation"]["CNA_threshold"]),
+        ploidy = float(config["copy_number_variation"].get("ploidy", 2))
     threads: 1
     benchmark:
         "benchmarks/convert_CNA_to_bedGraph/convert_CNA_to_bedGraph---{SAMPLES}_benchmark.txt"
@@ -1236,11 +1345,19 @@ rule convert_CNA_to_bedGraph:
         shell("printf '\033[1;36m{params.sample}: Filter and converting CNA counts to bedGraph...\\n\033[0m'")
 
         counts = pd.read_csv(input.log2_read_counts,  sep='\t+', engine='python', skiprows=1)
-        counts.iloc[:,4] = 2**counts.iloc[:,4]
 
-        bdg = counts.iloc[:,[0,1,2,4]]
-        bdg_filt = bdg[abs(bdg.iloc[:,3]) >= params.CNA_threshold]
-        bdg_filt.to_csv(output.bedGraph_filtered, header=False, index=False, sep='\t')
+        # log2 ratio (relative to the sample baseline) -> integer copy number (round half up) -> linear ratio
+        copy_number = numpy.floor(params.ploidy * 2**counts.iloc[:,4] + 0.5)
+        ratio = copy_number / params.ploidy
+
+        # Correct gains AND losses beyond the threshold; never CN = 0 (cannot divide by 0)
+        keep = ((ratio >= params.CNA_threshold) | (ratio <= 1 / params.CNA_threshold)) & (copy_number > 0)
+
+        # Store (ratio - 1): bigwigCompare adds a pseudocount of 1 to this track, so the
+        # signal is divided by the ratio in CNA regions and by 1 everywhere else
+        bdg = counts.iloc[:,[0,1,2]].copy()
+        bdg["correction"] = ratio - 1
+        bdg[keep].to_csv(output.bedGraph_filtered, header=False, index=False, sep='\t')
 
 
 
@@ -1290,6 +1407,7 @@ rule correct_CNV_normalized_bigWigs:
 
             $CONDA_PREFIX/bin/bedGraphToBigWig {output.sorted_bedGraph} {input.chrSizes} {params.bigWig_filtered} &> {log.bedGraphToBigWig_out}
 
+            # signal / (track + 1): the track stores (copy ratio - 1) in CNA bins and is empty (= 0) elsewhere
             $CONDA_PREFIX/bin/bigwigCompare \
             --bigwig1 {input.normalized_bigWig} \
             --bigwig2 {params.bigWig_filtered} \
@@ -1335,7 +1453,8 @@ rule all_peaks_file_and_score_matrix:
 
         mkdir -p {params.make_directory}
 
-        cat {params.peaks_dir}*.*Peak >> {output.concatenation_bed}
+        # only the declared peak files (the glob *.*Peak also caught the *_peaks_chr.narrowPeak copies)
+        cat {input.peaks_file} > {output.concatenation_bed}
         sort -V -k1,1 -k2,2 -k5,5 {output.concatenation_bed} > {output.concatenation_bed_sorted}
 
         $CONDA_PREFIX/bin/bedtools merge -i {output.concatenation_bed_sorted} | uniq > {output.concatenation_bed_collapsed}

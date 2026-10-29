@@ -37,6 +37,9 @@ peak_calling:
     plot_heatmap: False
     raw_heatmap_color: "Blues"
     zScore_heatmap_color: "seismic"
+  peak_based_normalization:
+    perform_peak_based_normalization: True # additional bigWigs scaled by size factors (median-of-ratios) on the consensus peaks
+    bigWig_binSize: 10 #bp
 
 
 
@@ -87,6 +90,7 @@ copy_number_variation:
   chromosome_prefix: ""
   kb_bin_resolution: 50
   CNA_threshold: 2
+  ploidy: 2 # copy number of the sample baseline (2 = diploid); CNAs are rounded to integer copy numbers
   CNA_plot_line_colors: "red"
   CNA_plot_point_size: 0.5
   CNA_plot_point_transparency: 0.5
