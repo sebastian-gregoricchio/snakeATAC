@@ -332,8 +332,8 @@ if (eval(str(config["bam_features"]["skip_bam_filtering"])) == False):
                 bam_mapq_only_sorted = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_sorted_woMT.bam"])),
                 bam_mapq_only_sorted_index = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_sorted_woMT.bam.bai"]))
             output:
-                bam_mdup = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_", DUP, "_sorted.bam"])),
-                bai_mdup = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", str(MAPQ), "_", DUP, "_sorted.bai"])),
+                bam_mdup = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bam"])),
+                bai_mdup = os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_", DUP, ".bai"])),
                 umi_metrics = "01_BAM_filtered/umi_metrics/{SAMPLES}_UMI_metrics.txt",
                 dup_metrics = "01_BAM_filtered/MarkDuplicates_metrics/{SAMPLES}_MarkDuplicates_metrics.txt",
                 flagstat_filtered = os.path.join("01_BAM_filtered/flagstat/", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_woMT_", DUP, "_flagstat.txt"]))
