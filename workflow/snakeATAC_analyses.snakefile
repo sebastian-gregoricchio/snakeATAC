@@ -284,8 +284,6 @@ if (eval(str(config["bam_features"]["skip_bam_filtering"])) == False):
             source_bam = os.path.join(config["workflow_configuration"]["runs_directory"], ''.join(["{SAMPLES}", config["bam_features"]["bam_suffix"]]))
         output:
             bam_mapq_only = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, ".bam"]))),
-            bam_mapq_only_sorted_toFix = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_toFix.bam"]))),
-            bam_mapq_only_sorted_index_toFix = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted_toFix.bai"]))),
             bam_mapq_only_sorted = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted.bam"]))),
             bam_mapq_only_sorted_index = temp(os.path.join("01_BAM_filtered", ''.join(["{SAMPLES}_mapq", MAPQ, "_sorted.bai"]))),
             idxstats_file = os.path.join(SUMMARYDIR, "reads_per_chromosome/{SAMPLES}_idxstats_read_per_chromosome.txt"),
@@ -297,8 +295,6 @@ if (eval(str(config["bam_features"]["skip_bam_filtering"])) == False):
             chr_remove_pattern = chr_remove_pattern
         threads:
             workflow.cores
-        log:
-            fixmate_log = "01_BAM_filtered/FixMateInformation_logs/{SAMPLES}_FixMateInformation.log"
         benchmark:
             "benchmarks/MAPQ_MT_filter/MAPQ_MT_filter---{SAMPLES}_benchmark.txt"
         shell:
@@ -306,21 +302,26 @@ if (eval(str(config["bam_features"]["skip_bam_filtering"])) == False):
             printf '\033[1;36m{params.sample}: filtering MAPQ...\\n\033[0m'
             $CONDA_PREFIX/bin/samtools view -@ {threads} -h -q {params.MAPQ_threshold} {input.source_bam} -o {output.bam_mapq_only}
 
-            $CONDA_PREFIX/bin/samtools sort -@ {threads} {output.bam_mapq_only} -o {output.bam_mapq_only_sorted_toFix}
-            $CONDA_PREFIX/bin/samtools index -@ {threads} -b {output.bam_mapq_only_sorted_toFix} {output.bam_mapq_only_sorted_index_toFix}
-
-            $CONDA_PREFIX/bin/gatk FixMateInformation \
-            --INPUT {output.bam_mapq_only_sorted_toFix} \
-            --OUTPUT {output.bam_mapq_only_sorted} \
-            --ASSUME_SORTED false \
-            --ADD_MATE_CIGAR true \
-            --CREATE_INDEX true \
-            --VALIDATION_STRINGENCY LENIENT &> {log.fixmate_log}
+            $CONDA_PREFIX/bin/samtools sort -@ {threads} {output.bam_mapq_only} -o {output.bam_mapq_only_sorted}
+            $CONDA_PREFIX/bin/samtools index -@ {threads} -b {output.bam_mapq_only_sorted} {output.bam_mapq_only_sorted_index}
 
             $CONDA_PREFIX/bin/samtools idxstats {output.bam_mapq_only_sorted} > {output.idxstats_file}
 
-            printf '\033[1;36m{params.sample}: Removing MT from BAM...\\n\033[0m'
-            $CONDA_PREFIX/bin/samtools idxstats {output.bam_mapq_only_sorted} | cut -f 1 | grep -v -E '{params.chr_remove_pattern}' | xargs ${{CONDA_PREFIX}}/bin/samtools view -@ {threads} -b {output.bam_mapq_only_sorted} > {output.bam_mapq_only_sorted_woMT}
+            printf '\033[1;36m{params.sample}: Removing MT from BAM and keeping complete pairs only...\\n\033[0m'
+            # The MAPQ and chromosome filters act on single reads: when only one mate is removed, the other one stays
+            # as an orphan that still carries the old proper-pair flag and TLEN (R1 and R2 counts differ, MACS3 BAMPE
+            # counts the orphan R1 as a full fragment). Mates are re-paired (collate + fixmate) and only proper pairs
+            # are kept. fixmate -m also adds the MC (mate CIGAR) tags needed by MarkDuplicatesWithMateCigar
+            # (this replaces gatk FixMateInformation, which leaves orphan reads unchanged).
+            # -F 2828 = unmapped, mate unmapped, secondary, QC-fail, supplementary.
+            # Streamed: no intermediate BAM is written (samtools temporary chunks are removed).
+            $CONDA_PREFIX/bin/samtools idxstats {output.bam_mapq_only_sorted} | cut -f 1 | grep -v -E '{params.chr_remove_pattern}' | \
+            xargs ${{CONDA_PREFIX}}/bin/samtools view -@ {threads} -u {output.bam_mapq_only_sorted} | \
+            $CONDA_PREFIX/bin/samtools collate -@ {threads} -O -u - 01_BAM_filtered/{params.sample}_collate_tmp | \
+            $CONDA_PREFIX/bin/samtools fixmate -@ {threads} -m -u - - | \
+            $CONDA_PREFIX/bin/samtools view -@ {threads} -u -f 2 -F 2828 - | \
+            $CONDA_PREFIX/bin/samtools sort -@ {threads} -T 01_BAM_filtered/{params.sample}_woMT_sort_tmp -o {output.bam_mapq_only_sorted_woMT} -
+            rm -f 01_BAM_filtered/{params.sample}_collate_tmp* 01_BAM_filtered/{params.sample}_woMT_sort_tmp*
             $CONDA_PREFIX/bin/samtools index -@ {threads} -b {output.bam_mapq_only_sorted_woMT} {output.bam_mapq_only_sorted_woMT_index}
             """
 

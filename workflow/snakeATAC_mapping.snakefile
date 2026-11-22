@@ -266,8 +266,19 @@ rule MAPQ_MT_filter:
 
         $CONDA_PREFIX/bin/samtools idxstats {output.bam_mapq_only_sorted} > {output.idxstats_file}
 
-        printf '\033[1;36m{params.sample}: Removing MT from BAM...\\n\033[0m'
-        $CONDA_PREFIX/bin/samtools idxstats {output.bam_mapq_only_sorted} | cut -f 1 | grep -v -E '{params.chr_remove_pattern}' | xargs ${{CONDA_PREFIX}}/bin/samtools view -@ {threads} -b {output.bam_mapq_only_sorted} > {output.bam_mapq_only_sorted_woMT}
+        printf '\033[1;36m{params.sample}: Removing MT from BAM and keeping complete pairs only...\\n\033[0m'
+        # The MAPQ and chromosome filters act on single reads: when only one mate is removed, the other one stays
+        # as an orphan that still carries the old proper-pair flag and TLEN (R1 and R2 counts differ, MACS3 BAMPE
+        # counts the orphan R1 as a full fragment). Mates are re-paired (collate + fixmate) and only proper pairs
+        # are kept. -F 2828 = unmapped, mate unmapped, secondary, QC-fail, supplementary.
+        # Streamed: no intermediate BAM is written (samtools temporary chunks are removed).
+        $CONDA_PREFIX/bin/samtools idxstats {output.bam_mapq_only_sorted} | cut -f 1 | grep -v -E '{params.chr_remove_pattern}' | \
+        xargs ${{CONDA_PREFIX}}/bin/samtools view -@ {threads} -u {output.bam_mapq_only_sorted} | \
+        $CONDA_PREFIX/bin/samtools collate -@ {threads} -O -u - 02_BAM/{params.sample}_collate_tmp | \
+        $CONDA_PREFIX/bin/samtools fixmate -@ {threads} -m -u - - | \
+        $CONDA_PREFIX/bin/samtools view -@ {threads} -u -f 2 -F 2828 - | \
+        $CONDA_PREFIX/bin/samtools sort -@ {threads} -T 02_BAM/{params.sample}_woMT_sort_tmp -o {output.bam_mapq_only_sorted_woMT} -
+        rm -f 02_BAM/{params.sample}_collate_tmp* 02_BAM/{params.sample}_woMT_sort_tmp*
         $CONDA_PREFIX/bin/samtools index -@ {threads} -b {output.bam_mapq_only_sorted_woMT} {output.bam_mapq_only_sorted_woMT_index}
         """
 
